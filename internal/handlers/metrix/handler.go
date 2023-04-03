@@ -9,8 +9,9 @@ import (
 )
 
 const (
-	updateGaugeURL   = "/update/gauge/"
-	updateCounterURL = "/update/counter/"
+	updateGaugeURL    = "/update/gauge/"
+	updateCounterURL  = "/update/counter/"
+	notImplementedURL = "/"
 )
 
 func getKeyValue(uri string, prefix string) (bool, []string) {
@@ -35,6 +36,7 @@ type Handler struct {
 func (h *Handler) Register(router *http.ServeMux) {
 	router.HandleFunc(updateGaugeURL, h.updateGauge)
 	router.HandleFunc(updateCounterURL, h.updateCounter)
+	router.HandleFunc(notImplementedURL, h.notImplemented)
 }
 
 func (h *Handler) updateGauge(w http.ResponseWriter, r *http.Request) {
@@ -45,7 +47,7 @@ func (h *Handler) updateGauge(w http.ResponseWriter, r *http.Request) {
 
 	ok, keyValue := getKeyValue(r.RequestURI, updateGaugeURL)
 	if !ok {
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
@@ -68,7 +70,7 @@ func (h *Handler) updateCounter(w http.ResponseWriter, r *http.Request) {
 
 	ok, keyValue := getKeyValue(r.RequestURI, updateCounterURL)
 	if !ok {
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
@@ -81,4 +83,8 @@ func (h *Handler) updateCounter(w http.ResponseWriter, r *http.Request) {
 	h.Storage.Add(keyValue[0], value)
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) notImplemented(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
 }
