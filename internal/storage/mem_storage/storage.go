@@ -3,20 +3,22 @@ package memstorage
 import "github.com/AntonPashechko/yametrix/internal/storage"
 
 type MemStorage struct {
-	Metrix map[string]float64
+	gauge   map[string]float64
+	counter map[string]int64
 }
 
 func NewMemStorage() storage.MertixStorage {
-	metrix := make(map[string]float64)
-	return &MemStorage{Metrix: metrix}
+	ms := &MemStorage{}
+	ms.gauge = make(map[string]float64)
+	ms.counter = make(map[string]int64)
+
+	return ms
 }
 
-func (m *MemStorage) Set(key string, value float64) {
-	m.Metrix[key] = value
+func (m *MemStorage) SetGauge(key string, value float64) {
+	m.gauge[key] = value
 }
 
-func (m *MemStorage) Add(key string, value int64) {
-	if m.Metrix[key] != 0 {
-		m.Metrix[key] += float64(value)
-	}
+func (m *MemStorage) AddCounter(key string, value int64) {
+	m.counter[key] += value
 }

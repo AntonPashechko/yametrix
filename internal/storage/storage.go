@@ -1,6 +1,6 @@
 package storage
 
 type MertixStorage interface {
-	Set(string, float64)
-	Add(string, int64)
+	SetGauge(string, float64)
+	AddCounter(string, int64)
 }

@@ -46,7 +46,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		h.Storage.Set(datas[0], value)
+		h.Storage.SetGauge(datas[0], value)
 	case "counter":
 		value, err := utils.StrToInt64(datas[2])
 		if err != nil {
@@ -54,7 +54,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		h.Storage.Add(datas[0], value)
+		h.Storage.AddCounter(datas[0], value)
 	default:
 		w.WriteHeader(http.StatusNotImplemented)
 		return
