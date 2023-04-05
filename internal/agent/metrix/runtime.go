@@ -81,7 +81,7 @@ func (rm *RuntimeMetrix) Update() error {
 
 	for _, gaugeName := range RuntimeGaugesName {
 		if reflect.TypeOf(fields[gaugeName]).Kind() != reflect.Float64 {
-			return fmt.Errorf("Bad gauge value type, %s not float64", gaugeName)
+			return fmt.Errorf("bad gauge value type, %s not float64", gaugeName)
 		}
 		rm.gauges[gaugeName] = fields[gaugeName].(float64)
 	}

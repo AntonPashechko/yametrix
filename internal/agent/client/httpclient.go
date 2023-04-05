@@ -1,5 +1,5 @@
 package client
 
-type HttpClient interface {
+type HTTPClient interface {
 	Send() error
 }

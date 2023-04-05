@@ -33,9 +33,9 @@ func runAgent(ctx context.Context) {
 
 	updateWorker := metrix.NewUpdateMetrixWorker(runtimeMetrix)
 
-	metrixHttpClient := client.NewMetrixClient(runtimeMetrix, endpoint)
+	metrixHTTPClient := client.NewMetrixClient(runtimeMetrix, endpoint)
 
-	sendWorker := client.NewSendMetrixWorker(metrixHttpClient)
+	sendWorker := client.NewSendMetrixWorker(metrixHTTPClient)
 
 	/*Запуск шадуллера обновления метрик*/
 	pollShaduller := shaduller.NewShaduller(pollInterval*time.Second, updateWorker)
