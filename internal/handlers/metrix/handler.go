@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/AntonPashechko/yametrix/internal/handlers"
 	"github.com/AntonPashechko/yametrix/internal/storage"
 	"github.com/AntonPashechko/yametrix/pkg/utils"
 )
@@ -14,6 +15,10 @@ const (
 
 type Handler struct {
 	Storage storage.MertixStorage
+}
+
+func NewMetrixHandler(storage storage.MertixStorage) handlers.Handler {
+	return &Handler{Storage: storage}
 }
 
 func (h *Handler) Register(router *http.ServeMux) {

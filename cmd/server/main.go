@@ -24,7 +24,7 @@ func runServer(ctx context.Context) {
 
 	router := http.NewServeMux()
 
-	metrixHandler := metrix.Handler{Storage: storage}
+	metrixHandler := metrix.NewMetrixHandler(storage)
 	metrixHandler.Register(router)
 
 	server := &http.Server{
