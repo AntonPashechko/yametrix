@@ -50,6 +50,7 @@ func TestHandler_update(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			resp := testRequest(t, ts, "POST", tt.url)
 			assert.Equal(t, tt.expectedCode, resp.StatusCode, "Код ответа не совпадает с ожидаемым")
+			resp.Body.Close()
 		})
 	}
 }
