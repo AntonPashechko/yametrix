@@ -6,12 +6,30 @@ import (
 	"testing"
 
 	memstorage "github.com/AntonPashechko/yametrix/internal/storage/mem_storage"
+	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func testRequest(t *testing.T, ts *httptest.Server, method, path string) *http.Response {
+	req, err := http.NewRequest(method, ts.URL+path, nil)
+	require.NoError(t, err)
+
+	resp, err := ts.Client().Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	return resp
+}
 
 func TestHandler_update(t *testing.T) {
 	storage := memstorage.NewMemStorage()
-	metrixHandler := Handler{Storage: storage}
+	router := chi.NewRouter()
+	metrixHandler := NewMetrixHandler(storage)
+	metrixHandler.Register(router)
+
+	ts := httptest.NewServer(router)
+	defer ts.Close()
 
 	tests := []struct {
 		name         string
@@ -30,13 +48,8 @@ func TestHandler_update(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := httptest.NewRequest(http.MethodPost, tt.url, nil)
-			w := httptest.NewRecorder()
-
-			// вызовем хендлер как обычную функцию, без запуска самого сервера
-			metrixHandler.update(w, r)
-
-			assert.Equal(t, tt.expectedCode, w.Code, "Код ответа не совпадает с ожидаемым")
+			resp := testRequest(t, ts, "POST", tt.url)
+			assert.Equal(t, tt.expectedCode, resp.StatusCode, "Код ответа не совпадает с ожидаемым")
 		})
 	}
 }

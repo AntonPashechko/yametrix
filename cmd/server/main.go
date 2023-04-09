@@ -9,6 +9,7 @@ import (
 
 	"github.com/AntonPashechko/yametrix/internal/handlers/metrix"
 	memstorage "github.com/AntonPashechko/yametrix/internal/storage/mem_storage"
+	"github.com/go-chi/chi/v5"
 )
 
 func main() {
@@ -22,7 +23,7 @@ func runServer(ctx context.Context) {
 
 	storage := memstorage.NewMemStorage()
 
-	router := http.NewServeMux()
+	router := chi.NewRouter()
 
 	metrixHandler := metrix.NewMetrixHandler(storage)
 	metrixHandler.Register(router)
