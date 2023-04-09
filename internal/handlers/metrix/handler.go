@@ -1,7 +1,6 @@
 package metrix
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -49,14 +48,14 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		w.Write([]byte(fmt.Sprintf("%f", value)))
+		w.Write([]byte(utils.Float64ToStr(value)))
 	case "counter":
 		value, ok := h.Storage.GetCounter(name)
 		if !ok {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-		w.Write([]byte(fmt.Sprintf("%d", value)))
+		w.Write([]byte(utils.Int64ToStr(value)))
 	default:
 		w.WriteHeader(http.StatusNotFound)
 		return

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/AntonPashechko/yametrix/internal/storage"
+	"github.com/AntonPashechko/yametrix/pkg/utils"
 )
 
 type MemStorage struct {
@@ -41,7 +42,8 @@ func (m *MemStorage) GetMetrixList() []string {
 	list := make([]string, 0, len(m.counter)+len(m.gauge))
 
 	for name, value := range m.gauge {
-		list = append(list, fmt.Sprintf("%s = %f", name, value))
+		strValue := utils.Float64ToStr(value)
+		list = append(list, fmt.Sprintf("%s = %s", name, strValue))
 	}
 
 	for name, value := range m.counter {
