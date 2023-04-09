@@ -4,18 +4,10 @@ import (
 	"context"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/AntonPashechko/yametrix/internal/agent/client"
 	"github.com/AntonPashechko/yametrix/internal/agent/metrix"
 	"github.com/AntonPashechko/yametrix/internal/agent/shaduller"
-)
-
-const (
-	pollInterval   = 2
-	reportInterval = 10
-
-	endpoint = "http://localhost:8080"
 )
 
 func main() {
@@ -29,20 +21,22 @@ func main() {
 
 func runAgent(ctx context.Context) {
 
+	parseFlags()
+
 	runtimeMetrix := metrix.NewRuntimeMetrix()
 
 	updateWorker := metrix.NewUpdateMetrixWorker(runtimeMetrix)
 
-	metrixHTTPClient := client.NewMetrixClient(runtimeMetrix, endpoint)
+	metrixHTTPClient := client.NewMetrixClient(runtimeMetrix, options.serverEndpoint)
 
 	sendWorker := client.NewSendMetrixWorker(metrixHTTPClient)
 
 	/*Запуск шадуллера обновления метрик*/
-	pollShaduller := shaduller.NewShaduller(pollInterval*time.Second, updateWorker)
+	pollShaduller := shaduller.NewShaduller(options.pollInterval, updateWorker)
 	go pollShaduller.Start()
 
 	/*Запуск шадуллера отправки метрик на сервер*/
-	reportShaduller := shaduller.NewShaduller(reportInterval*time.Second, sendWorker)
+	reportShaduller := shaduller.NewShaduller(options.reportInterval, sendWorker)
 	go reportShaduller.Start()
 
 	<-ctx.Done()

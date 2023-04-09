@@ -13,6 +13,8 @@ import (
 )
 
 func main() {
+	parseFlags()
+
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
@@ -29,7 +31,7 @@ func runServer(ctx context.Context) {
 	metrixHandler.Register(router)
 
 	server := &http.Server{
-		Addr:    "localhost:8080",
+		Addr:    endpoint,
 		Handler: router,
 	}
 

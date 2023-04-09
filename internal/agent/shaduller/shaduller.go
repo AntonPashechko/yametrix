@@ -12,9 +12,9 @@ type Shaduller struct {
 	ch     chan bool
 }
 
-func NewShaduller(d time.Duration, worker RecurringWorker) Shaduller {
+func NewShaduller(d int64, worker RecurringWorker) Shaduller {
 	return Shaduller{
-		ticker: time.NewTicker(d),
+		ticker: time.NewTicker(time.Duration(d) * time.Second),
 		ch:     make(chan bool),
 		worker: worker,
 	}
