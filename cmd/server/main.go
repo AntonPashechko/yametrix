@@ -2,10 +2,11 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"log"
 	"net/http"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/AntonPashechko/yametrix/internal/handlers/metrix"
 	memstorage "github.com/AntonPashechko/yametrix/internal/storage/mem_storage"
@@ -36,15 +37,19 @@ func runServer(ctx context.Context) {
 	}
 
 	go func() {
-		err := server.ListenAndServe()
-		if err != nil {
-			panic(err)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("listen: %s\n", err)
 		}
 	}()
 
 	<-ctx.Done()
 
-	if err := server.Shutdown(context.Background()); err != nil {
-		fmt.Printf("shutdown: %s", err.Error())
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer func() {
+		cancel()
+	}()
+
+	if err := server.Shutdown(ctx); err != nil {
+		log.Fatalf("Server Shutdown Failed:%+v", err)
 	}
 }
