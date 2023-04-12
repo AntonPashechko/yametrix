@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"os/signal"
 	"syscall"
@@ -30,7 +29,9 @@ func runServer(ctx context.Context) {
 	metrixHandler := metrix.NewMetrixHandler(storage)
 	metrixHandler.Register(router)
 
-	server := &http.Server{
+	http.ListenAndServe(endpoint, router)
+
+	/*server := &http.Server{
 		Addr:    endpoint,
 		Handler: router,
 	}
@@ -39,7 +40,7 @@ func runServer(ctx context.Context) {
 		log.Fatalf("listen: %s\n", err)
 	}
 
-	/*go func() {
+	go func() {
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("listen: %s\n", err)
 		}
