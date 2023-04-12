@@ -3,8 +3,6 @@ package main
 import (
 	"context"
 	"net/http"
-	"os/signal"
-	"syscall"
 
 	"github.com/AntonPashechko/yametrix/internal/handlers/metrix"
 	memstorage "github.com/AntonPashechko/yametrix/internal/storage/mem_storage"
@@ -14,10 +12,19 @@ import (
 func main() {
 	parseFlags()
 
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
+	storage := memstorage.NewMemStorage()
 
-	runServer(ctx)
+	router := chi.NewRouter()
+
+	metrixHandler := metrix.NewMetrixHandler(storage)
+	metrixHandler.Register(router)
+
+	http.ListenAndServe(endpoint, router)
+
+	/*ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()*/
+
+	/*runServer(ctx)*/
 }
 
 func runServer(ctx context.Context) {
