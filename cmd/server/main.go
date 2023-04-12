@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/AntonPashechko/yametrix/internal/handlers/metrix"
 	memstorage "github.com/AntonPashechko/yametrix/internal/storage/mem_storage"
@@ -36,7 +35,11 @@ func runServer(ctx context.Context) {
 		Handler: router,
 	}
 
-	go func() {
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Fatalf("listen: %s\n", err)
+	}
+
+	/*go func() {
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("listen: %s\n", err)
 		}
@@ -51,5 +54,5 @@ func runServer(ctx context.Context) {
 
 	if err := server.Shutdown(ctx); err != nil {
 		log.Fatalf("Server Shutdown Failed:%+v", err)
-	}
+	}*/
 }
