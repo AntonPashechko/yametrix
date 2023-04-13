@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"strings"
 )
 
 type Options struct {
@@ -18,4 +19,8 @@ func parseFlags() {
 	flag.Int64Var(&options.pollInterval, "p", 2, "poll interval")
 
 	flag.Parse()
+
+	if !strings.HasPrefix(options.serverEndpoint, "http") && !strings.HasPrefix(options.serverEndpoint, "https") {
+		options.serverEndpoint = "http://" + options.serverEndpoint
+	}
 }
