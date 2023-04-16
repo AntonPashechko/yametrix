@@ -1,15 +1,15 @@
 package metrix
 
-import "github.com/AntonPashechko/yametrix/internal/agent/shaduller"
+import "github.com/AntonPashechko/yametrix/internal/agent/scheduler"
 
-type UpdateMetrixWorker struct {
+type updateMetrixWorker struct {
 	metrix *RuntimeMetrix
 }
 
-func (w *UpdateMetrixWorker) Work() error {
+func (w *updateMetrixWorker) Work() error {
 	return w.metrix.Update()
 }
 
-func NewUpdateMetrixWorker(metrix *RuntimeMetrix) shaduller.RecurringWorker {
-	return &UpdateMetrixWorker{metrix: metrix}
+func NewUpdateMetrixWorker(metrix *RuntimeMetrix) scheduler.RecurringWorker {
+	return &updateMetrixWorker{metrix: metrix}
 }

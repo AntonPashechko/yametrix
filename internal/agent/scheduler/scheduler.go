@@ -1,4 +1,4 @@
-package shaduller
+package scheduler
 
 import (
 	"fmt"
@@ -6,22 +6,22 @@ import (
 )
 
 /*Планировщик и исполнитель задачи - по тику в заданном интервале запускаем работу у контролируемого объекта*/
-type Shaduller struct {
+type Scheduler struct {
 	ticker *time.Ticker
 	worker RecurringWorker
-	ch     chan bool
+	done   chan bool
 }
 
-func NewShaduller(d int64, worker RecurringWorker) Shaduller {
-	return Shaduller{
+func NewScheduler(d int64, worker RecurringWorker) Scheduler {
+	return Scheduler{
 		ticker: time.NewTicker(time.Duration(d) * time.Second),
-		ch:     make(chan bool),
+		done:   make(chan bool),
 		worker: worker,
 	}
 }
 
-func (s Shaduller) Start() {
-	defer func() { s.ch <- true }()
+func (s Scheduler) Start() {
+	defer func() { s.done <- true }()
 	for {
 		select {
 		case <-s.ticker.C:
@@ -29,14 +29,14 @@ func (s Shaduller) Start() {
 			if err != nil {
 				fmt.Println(err)
 			}
-		case <-s.ch:
+		case <-s.done:
 			return
 		}
 	}
 }
 
-func (s Shaduller) Stop() {
+func (s Scheduler) Stop() {
 	s.ticker.Stop()
-	s.ch <- true
-	<-s.ch
+	s.done <- true
+	<-s.done
 }

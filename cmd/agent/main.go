@@ -7,7 +7,7 @@ import (
 
 	"github.com/AntonPashechko/yametrix/internal/agent/client"
 	"github.com/AntonPashechko/yametrix/internal/agent/metrix"
-	"github.com/AntonPashechko/yametrix/internal/agent/shaduller"
+	"github.com/AntonPashechko/yametrix/internal/agent/scheduler"
 )
 
 func main() {
@@ -32,16 +32,14 @@ func runAgent(ctx context.Context) {
 	sendWorker := client.NewSendMetrixWorker(metrixHTTPClient)
 
 	/*Запуск шадуллера обновления метрик*/
-	pollShaduller := shaduller.NewShaduller(options.pollInterval, updateWorker)
-	go pollShaduller.Start()
+	pollScheduler := scheduler.NewScheduler(options.pollInterval, updateWorker)
+	defer pollScheduler.Stop()
+	go pollScheduler.Start()
 
 	/*Запуск шадуллера отправки метрик на сервер*/
-	reportShaduller := shaduller.NewShaduller(options.reportInterval, sendWorker)
-	go reportShaduller.Start()
+	reportScheduler := scheduler.NewScheduler(options.reportInterval, sendWorker)
+	defer reportScheduler.Stop()
+	go reportScheduler.Start()
 
 	<-ctx.Done()
-
-	/*Остановка шадуллера*/
-	pollShaduller.Stop()
-	reportShaduller.Stop()
 }

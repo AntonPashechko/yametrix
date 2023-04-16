@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/AntonPashechko/yametrix/internal/handlers/metrix"
@@ -20,12 +19,10 @@ func main() {
 	metrixHandler.Register(router)
 
 	http.ListenAndServe(endpoint, router)
-
-	/*ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()*/
-
-	/*runServer(ctx)*/
 }
+
+/*ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
 func runServer(ctx context.Context) {
 
@@ -38,7 +35,7 @@ func runServer(ctx context.Context) {
 
 	http.ListenAndServe(endpoint, router)
 
-	/*server := &http.Server{
+	server := &http.Server{
 		Addr:    endpoint,
 		Handler: router,
 	}
@@ -62,5 +59,5 @@ func runServer(ctx context.Context) {
 
 	if err := server.Shutdown(ctx); err != nil {
 		log.Fatalf("Server Shutdown Failed:%+v", err)
-	}*/
-}
+	}
+}*/

@@ -37,29 +37,19 @@ func (h *Handler) getAll(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
-	mType := chi.URLParam(r, "type")
 	name := chi.URLParam(r, "name")
 
-	switch mType {
-	case "gauge":
-		value, ok := h.Storage.GetGauge(name)
-		if !ok {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-
+	if value, ok := h.Storage.GetGauge(name); ok {
 		w.Write([]byte(utils.Float64ToStr(value)))
-	case "counter":
-		value, ok := h.Storage.GetCounter(name)
-		if !ok {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-		w.Write([]byte(utils.Int64ToStr(value)))
-	default:
-		w.WriteHeader(http.StatusNotFound)
 		return
 	}
+
+	if value, ok := h.Storage.GetCounter(name); ok {
+		w.Write([]byte(utils.Int64ToStr(value)))
+		return
+	}
+
+	w.WriteHeader(http.StatusNotFound)
 }
 
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {

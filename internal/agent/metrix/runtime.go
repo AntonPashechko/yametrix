@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"runtime"
 	"sync"
+
+	"github.com/AntonPashechko/yametrix/pkg/utils"
 )
 
 type MetrixType string
@@ -56,7 +58,7 @@ func (rm *RuntimeMetrix) GetMetrix() (map[string]float64, map[string]int64) {
 	rm.Lock()
 	defer rm.Unlock()
 
-	return rm.gauges, rm.counters
+	return utils.DeepCopyMap[string, float64](rm.gauges), utils.DeepCopyMap[string, int64](rm.counters)
 }
 
 func (rm *RuntimeMetrix) Update() error {
@@ -67,13 +69,13 @@ func (rm *RuntimeMetrix) Update() error {
 	/*Делаем json, что бы было убоднее пройтись по нужным метрикам*/
 	jMetrix, err := json.Marshal(mem)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot marshal json: %w", err)
 	}
 
 	var fields map[string]interface{}
 	err = json.Unmarshal(jMetrix, &fields)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot unmarshal json: %w", err)
 	}
 
 	rm.Lock()
