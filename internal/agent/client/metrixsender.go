@@ -37,12 +37,12 @@ func (mhc *MetrixHTTPClient) post(url string) error {
 	// пишем запрос
 	request, err := http.NewRequest(http.MethodPost, url, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot make http request: %w", err)
 	}
 
 	response, err := mhc.client.Do(request)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot do request: %w", err)
 	}
 
 	response.Body.Close()
@@ -57,7 +57,7 @@ func (mhc *MetrixHTTPClient) Send() error {
 		url := mhc.createURL(update, metrix.Gauge, key, fmt.Sprintf("%f", value))
 		err := mhc.post(url)
 		if err != nil {
-			return err
+			return fmt.Errorf("post error: %w", err)
 		}
 	}
 
@@ -65,7 +65,7 @@ func (mhc *MetrixHTTPClient) Send() error {
 		url := mhc.createURL(update, metrix.Counter, key, fmt.Sprintf("%d", value))
 		err := mhc.post(url)
 		if err != nil {
-			return err
+			return fmt.Errorf("post error: %w", err)
 		}
 	}
 

@@ -1,7 +1,12 @@
 package main
 
 import (
+	"context"
+	"log"
 	"net/http"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/AntonPashechko/yametrix/internal/handlers/metrix"
 	memstorage "github.com/AntonPashechko/yametrix/internal/storage/mem_storage"
@@ -11,18 +16,11 @@ import (
 func main() {
 	parseFlags()
 
-	storage := memstorage.NewMemStorage()
-
-	router := chi.NewRouter()
-
-	metrixHandler := metrix.NewMetrixHandler(storage)
-	metrixHandler.Register(router)
-
-	http.ListenAndServe(endpoint, router)
-}
-
-/*ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+
+	runServer(ctx)
+}
 
 func runServer(ctx context.Context) {
 
@@ -33,15 +31,9 @@ func runServer(ctx context.Context) {
 	metrixHandler := metrix.NewMetrixHandler(storage)
 	metrixHandler.Register(router)
 
-	http.ListenAndServe(endpoint, router)
-
 	server := &http.Server{
 		Addr:    endpoint,
 		Handler: router,
-	}
-
-	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Fatalf("listen: %s\n", err)
 	}
 
 	go func() {
@@ -60,4 +52,4 @@ func runServer(ctx context.Context) {
 	if err := server.Shutdown(ctx); err != nil {
 		log.Fatalf("Server Shutdown Failed:%+v", err)
 	}
-}*/
+}

@@ -2,14 +2,14 @@ package client
 
 import "github.com/AntonPashechko/yametrix/internal/agent/scheduler"
 
-type SendMetrixWorker struct {
+type sendMetrixWorker struct {
 	client HTTPClient
 }
 
-func (w *SendMetrixWorker) Work() error {
+func (w *sendMetrixWorker) Work() error {
 	return w.client.Send()
 }
 
 func NewSendMetrixWorker(client HTTPClient) scheduler.RecurringWorker {
-	return &SendMetrixWorker{client: client}
+	return &sendMetrixWorker{client: client}
 }

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
-	"reflect"
 	"runtime"
 	"sync"
 
@@ -58,7 +57,7 @@ func (rm *RuntimeMetrix) GetMetrix() (map[string]float64, map[string]int64) {
 	rm.Lock()
 	defer rm.Unlock()
 
-	return utils.DeepCopyMap[string, float64](rm.gauges), utils.DeepCopyMap[string, int64](rm.counters)
+	return utils.DeepCopyMap(rm.gauges), utils.DeepCopyMap(rm.counters)
 }
 
 func (rm *RuntimeMetrix) Update() error {
@@ -82,9 +81,6 @@ func (rm *RuntimeMetrix) Update() error {
 	defer rm.Unlock()
 
 	for _, gaugeName := range RuntimeGaugesName {
-		if reflect.TypeOf(fields[gaugeName]).Kind() != reflect.Float64 {
-			return fmt.Errorf("bad gauge value type, %s not float64", gaugeName)
-		}
 		rm.gauges[gaugeName] = fields[gaugeName].(float64)
 	}
 
