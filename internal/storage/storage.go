@@ -1,6 +1,6 @@
 package storage
 
-type MertixStorage interface {
+type MetrixStorage interface {
 	SetGauge(string, float64)
 	AddCounter(string, int64)
 
@@ -8,4 +8,5 @@ type MertixStorage interface {
 	GetCounter(string) (int64, bool)
 
 	GetMetrixList() []string
+	GetMetrix() (map[string]float64, map[string]int64)
 }

@@ -1,21 +1,16 @@
-package metrix
+package updater
 
 import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
 	"runtime"
-	"sync"
 
-	"github.com/AntonPashechko/yametrix/pkg/utils"
+	"github.com/AntonPashechko/yametrix/internal/agent/scheduler"
+	"github.com/AntonPashechko/yametrix/internal/storage"
 )
 
-type MetrixType string
-
 const (
-	Gauge   MetrixType = "gauge"
-	Counter MetrixType = "counter"
-
 	PollCount   = "PollCount"
 	RandomValue = "RandomValue"
 
@@ -35,33 +30,11 @@ func randFloats() float64 {
 	return floatMin + rand.Float64()*(floatMax-floatMin)
 }
 
-type RuntimeMetrix struct {
-	sync.Mutex
-
-	gauges   map[string]float64
-	counters map[string]int64
+type updateMetrixWorker struct {
+	storage storage.MetrixStorage
 }
 
-func NewRuntimeMetrix() *RuntimeMetrix {
-	rm := RuntimeMetrix{}
-	rm.gauges = make(map[string]float64)
-	rm.counters = make(map[string]int64)
-
-	rm.counters[PollCount] = 0
-	rm.gauges[RandomValue] = randFloats()
-
-	return &rm
-}
-
-func (rm *RuntimeMetrix) GetMetrix() (map[string]float64, map[string]int64) {
-	rm.Lock()
-	defer rm.Unlock()
-
-	return utils.DeepCopyMap(rm.gauges), utils.DeepCopyMap(rm.counters)
-}
-
-func (rm *RuntimeMetrix) Update() error {
-
+func (m *updateMetrixWorker) Work() error {
 	mem := new(runtime.MemStats)
 	runtime.ReadMemStats(mem)
 
@@ -77,15 +50,16 @@ func (rm *RuntimeMetrix) Update() error {
 		return fmt.Errorf("cannot unmarshal json: %w", err)
 	}
 
-	rm.Lock()
-	defer rm.Unlock()
-
 	for _, gaugeName := range RuntimeGaugesName {
-		rm.gauges[gaugeName] = fields[gaugeName].(float64)
+		m.storage.SetGauge(gaugeName, fields[gaugeName].(float64))
 	}
 
-	rm.counters[PollCount] += 1
-	rm.gauges[RandomValue] = randFloats()
+	m.storage.AddCounter(PollCount, 1)
+	m.storage.SetGauge(RandomValue, randFloats())
 
 	return nil
+}
+
+func NewUpdateMetrixWorker(storage storage.MetrixStorage) scheduler.RecurringWorker {
+	return &updateMetrixWorker{storage: storage}
 }

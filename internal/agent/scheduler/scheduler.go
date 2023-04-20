@@ -1,7 +1,7 @@
 package scheduler
 
 import (
-	"fmt"
+	"log"
 	"time"
 )
 
@@ -20,23 +20,21 @@ func NewScheduler(d int64, worker RecurringWorker) Scheduler {
 	}
 }
 
-func (s Scheduler) Start() {
-	defer func() { s.done <- true }()
+func (m Scheduler) Start() {
 	for {
 		select {
-		case <-s.ticker.C:
-			err := s.worker.Work()
+		case <-m.ticker.C:
+			err := m.worker.Work()
 			if err != nil {
-				fmt.Println(err)
+				log.Printf("ERROR: cannot do the work %s", err)
 			}
-		case <-s.done:
+		case <-m.done:
 			return
 		}
 	}
 }
 
-func (s Scheduler) Stop() {
-	s.ticker.Stop()
-	s.done <- true
-	<-s.done
+func (m Scheduler) Stop() {
+	m.ticker.Stop()
+	m.done <- true
 }

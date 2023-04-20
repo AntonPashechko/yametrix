@@ -1,11 +1,11 @@
-package metrix
+package handlers
 
 import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	memstorage "github.com/AntonPashechko/yametrix/internal/storage/mem_storage"
+	memstorage "github.com/AntonPashechko/yametrix/internal/storage/memstorage"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

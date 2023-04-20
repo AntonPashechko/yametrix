@@ -8,8 +8,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/AntonPashechko/yametrix/internal/handlers/metrix"
-	memstorage "github.com/AntonPashechko/yametrix/internal/storage/mem_storage"
+	"github.com/AntonPashechko/yametrix/internal/handlers"
+	memstorage "github.com/AntonPashechko/yametrix/internal/storage/memstorage"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -28,7 +28,7 @@ func runServer(ctx context.Context) {
 
 	router := chi.NewRouter()
 
-	metrixHandler := metrix.NewMetrixHandler(storage)
+	metrixHandler := handlers.NewMetrixHandler(storage)
 	metrixHandler.Register(router)
 
 	server := &http.Server{
