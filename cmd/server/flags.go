@@ -5,14 +5,25 @@ import (
 	"os"
 )
 
-var endpoint string
+type Options struct {
+	endpoint string
+	logLevel string
+}
+
+var options Options
 
 func parseFlags() {
-	flag.StringVar(&endpoint, "a", "localhost:8080", "address and port to run server")
+	/*Разбираем командную строку*/
+	flag.StringVar(&options.endpoint, "a", "localhost:8080", "address and port to run server")
+	flag.StringVar(&options.logLevel, "l", "info", "log level")
 	flag.Parse()
 
 	/*Но если заданы в окружении - берем оттуда*/
 	if addr, exist := os.LookupEnv("ADDRESS"); exist {
-		endpoint = addr
+		options.endpoint = addr
+	}
+
+	if lvl, exist := os.LookupEnv("LOG_LEVEL"); exist {
+		options.logLevel = lvl
 	}
 }

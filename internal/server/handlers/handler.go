@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/AntonPashechko/yametrix/internal/logger"
 	"github.com/AntonPashechko/yametrix/internal/storage"
 	"github.com/AntonPashechko/yametrix/pkg/utils"
 	"github.com/go-chi/chi/v5"
@@ -24,6 +25,9 @@ func NewMetrixHandler(storage storage.MetrixStorage) Handler {
 }
 
 func (h *Handler) Register(router *chi.Mux) {
+
+	//Подключаем middleware логирования
+	router.Use(logger.Middleware)
 
 	router.Get("/", h.getAll)
 	router.Get("/value/{type}/{name}", h.get)

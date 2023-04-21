@@ -8,9 +8,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/AntonPashechko/yametrix/internal/handlers"
+	"github.com/AntonPashechko/yametrix/internal/logger"
+	"github.com/AntonPashechko/yametrix/internal/server/handlers"
 	memstorage "github.com/AntonPashechko/yametrix/internal/storage/memstorage"
 	"github.com/go-chi/chi/v5"
+	"go.uber.org/zap"
 )
 
 func main() {
@@ -24,6 +26,8 @@ func main() {
 
 func runServer(ctx context.Context) {
 
+	logger.Initialize(options.logLevel)
+
 	storage := memstorage.NewMemStorage()
 
 	router := chi.NewRouter()
@@ -32,7 +36,7 @@ func runServer(ctx context.Context) {
 	metrixHandler.Register(router)
 
 	server := &http.Server{
-		Addr:    endpoint,
+		Addr:    options.endpoint,
 		Handler: router,
 	}
 
@@ -41,6 +45,8 @@ func runServer(ctx context.Context) {
 			log.Fatalf("listen: %s\n", err)
 		}
 	}()
+
+	logger.Log.Info("Running server", zap.String("address", options.endpoint))
 
 	<-ctx.Done()
 
