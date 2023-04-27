@@ -9,6 +9,7 @@ import (
 	"github.com/AntonPashechko/yametrix/internal/logger"
 	"github.com/AntonPashechko/yametrix/internal/models"
 	"github.com/AntonPashechko/yametrix/internal/storage"
+	"github.com/AntonPashechko/yametrix/pkg/utils"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 )
@@ -32,8 +33,16 @@ func (m *Handler) Register(router *chi.Mux) {
 	router.Use(logger.Middleware)
 
 	router.Get("/", m.getAll)
-	router.Post("/value/", m.get)
-	router.Post("/update/", m.update)
+
+	router.Route("/update", func(r chi.Router) {
+		r.Post("/", m.updateJson)
+		r.Post("/{type}/{name}/{value}", m.update)
+	})
+
+	router.Route("/value", func(r chi.Router) {
+		r.Post("/", m.getJson)
+		r.Get("/{type}/{name}", m.get)
+	})
 }
 
 func (m *Handler) getAll(w http.ResponseWriter, r *http.Request) {
@@ -42,7 +51,55 @@ func (m *Handler) getAll(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, strings.Join(list, ", "))
 }
 
-func (m *Handler) get(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
+	mType := chi.URLParam(r, "type")
+	name := chi.URLParam(r, "name")
+
+	switch mType {
+	case Gauge:
+		if value, ok := h.Storage.GetGauge(name); ok {
+			w.Write([]byte(utils.Float64ToStr(value)))
+			return
+		}
+	case Counter:
+		if value, ok := h.Storage.GetCounter(name); ok {
+			w.Write([]byte(utils.Int64ToStr(value)))
+			return
+		}
+	}
+
+	w.WriteHeader(http.StatusNotFound)
+}
+
+func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
+	mType := chi.URLParam(r, "type")
+	name := chi.URLParam(r, "name")
+
+	switch mType {
+	case Gauge:
+		if value, err := utils.StrToFloat64(chi.URLParam(r, "value")); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		} else {
+			h.Storage.SetGauge(name, value)
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+	case Counter:
+		if value, err := utils.StrToInt64(chi.URLParam(r, "value")); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		} else {
+			h.Storage.AddCounter(name, value)
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+	}
+
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+func (m *Handler) getJson(w http.ResponseWriter, r *http.Request) {
 
 	var req models.MetricsDTO
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -77,7 +134,7 @@ func (m *Handler) get(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (m *Handler) update(w http.ResponseWriter, r *http.Request) {
+func (m *Handler) updateJson(w http.ResponseWriter, r *http.Request) {
 
 	var req models.MetricsDTO
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

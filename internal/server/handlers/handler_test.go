@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func testRequest(t *testing.T, ts *httptest.Server, method, path, body string) *resty.Response {
+func testRequestWithBody(t *testing.T, ts *httptest.Server, method, path, body string) *resty.Response {
 
 	req := resty.New().R()
 	req.Method = method
@@ -28,7 +28,50 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path, body string) *
 	return resp
 }
 
+func testRequest(t *testing.T, ts *httptest.Server, method, path string) *http.Response {
+	req, err := http.NewRequest(method, ts.URL+path, nil)
+	require.NoError(t, err)
+
+	resp, err := ts.Client().Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	return resp
+}
+
 func TestHandler_update(t *testing.T) {
+	storage := memstorage.NewMemStorage()
+	router := chi.NewRouter()
+	metrixHandler := NewMetrixHandler(storage)
+	metrixHandler.Register(router)
+
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+
+	tests := []struct {
+		url          string
+		expectedCode int
+	}{
+		{"/update/gauge/testGauge/100", http.StatusOK},
+		{"/update/gauge/", http.StatusNotFound},
+		{"/update/gauge/testGauge/none", http.StatusBadRequest},
+
+		{"/update/counter/testCounter/100", http.StatusOK},
+		{"/update/counter/", http.StatusNotFound},
+		{"/update/counter/testCounter/none", http.StatusBadRequest},
+
+		{"/update/unknown/testCounter/100", http.StatusNotImplemented},
+	}
+	for _, tt := range tests {
+		t.Run(tt.url, func(t *testing.T) {
+			resp := testRequest(t, ts, "POST", tt.url)
+			assert.Equal(t, tt.expectedCode, resp.StatusCode, "Код ответа не совпадает с ожидаемым")
+			resp.Body.Close()
+		})
+	}
+}
+
+func TestHandler_updateJson(t *testing.T) {
 	storage := memstorage.NewMemStorage()
 	router := chi.NewRouter()
 	metrixHandler := NewMetrixHandler(storage)
@@ -50,7 +93,7 @@ func TestHandler_update(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp := testRequest(t, ts, "POST", "/update/", tt.body)
+			resp := testRequestWithBody(t, ts, "POST", "/update/", tt.body)
 			assert.Equal(t, tt.expectedCode, resp.StatusCode(), "Код ответа не совпадает с ожидаемым")
 		})
 	}
