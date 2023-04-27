@@ -1,14 +1,16 @@
 package handlers
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"strings"
 
 	"github.com/AntonPashechko/yametrix/internal/logger"
+	"github.com/AntonPashechko/yametrix/internal/models"
 	"github.com/AntonPashechko/yametrix/internal/storage"
-	"github.com/AntonPashechko/yametrix/pkg/utils"
 	"github.com/go-chi/chi/v5"
+	"go.uber.org/zap"
 )
 
 const (
@@ -24,66 +26,88 @@ func NewMetrixHandler(storage storage.MetrixStorage) Handler {
 	return Handler{Storage: storage}
 }
 
-func (h *Handler) Register(router *chi.Mux) {
+func (m *Handler) Register(router *chi.Mux) {
 
 	//Подключаем middleware логирования
 	router.Use(logger.Middleware)
 
-	router.Get("/", h.getAll)
-	router.Get("/value/{type}/{name}", h.get)
-	router.Post("/update/{type}/{name}/{value}", h.update)
+	router.Get("/", m.getAll)
+	router.Post("/value/", m.get)
+	router.Post("/update/", m.update)
 }
 
-func (h *Handler) getAll(w http.ResponseWriter, r *http.Request) {
-	list := h.Storage.GetMetrixList()
+func (m *Handler) getAll(w http.ResponseWriter, r *http.Request) {
+	list := m.Storage.GetMetrixList()
 
 	io.WriteString(w, strings.Join(list, ", "))
 }
 
-func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
-	mType := chi.URLParam(r, "type")
-	name := chi.URLParam(r, "name")
+func (m *Handler) get(w http.ResponseWriter, r *http.Request) {
 
-	switch mType {
+	var req models.MetricsDTO
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	switch req.MType {
 	case Gauge:
-		if value, ok := h.Storage.GetGauge(name); ok {
-			w.Write([]byte(utils.Float64ToStr(value)))
+		if value, ok := m.Storage.GetGauge(req.ID); ok {
+			req.SetValue(value)
+		} else {
+			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 	case Counter:
-		if value, ok := h.Storage.GetCounter(name); ok {
-			w.Write([]byte(utils.Int64ToStr(value)))
+		if detla, ok := m.Storage.GetCounter(req.ID); ok {
+			req.SetDelta(detla)
+		} else {
+			w.WriteHeader(http.StatusNotFound)
 			return
 		}
+	default:
+		w.WriteHeader(http.StatusNotFound)
+		return
 	}
 
-	w.WriteHeader(http.StatusNotFound)
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(req); err != nil {
+		logger.Log.Debug("error encoding response", zap.Error(err))
+	}
 }
 
-func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
-	mType := chi.URLParam(r, "type")
-	name := chi.URLParam(r, "name")
+func (m *Handler) update(w http.ResponseWriter, r *http.Request) {
 
-	switch mType {
-	case Gauge:
-		if value, err := utils.StrToFloat64(chi.URLParam(r, "value")); err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		} else {
-			h.Storage.SetGauge(name, value)
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-	case Counter:
-		if value, err := utils.StrToInt64(chi.URLParam(r, "value")); err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		} else {
-			h.Storage.AddCounter(name, value)
-			w.WriteHeader(http.StatusOK)
-			return
-		}
+	var req models.MetricsDTO
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
+		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 
-	w.WriteHeader(http.StatusNotImplemented)
+	switch req.MType {
+	case Gauge:
+		if req.Value == nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		m.Storage.SetGauge(req.ID, *req.Value)
+	case Counter:
+		if req.Delta == nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		m.Storage.AddCounter(req.ID, *req.Delta)
+		*req.Delta, _ = m.Storage.GetCounter(req.ID)
+	default:
+		w.WriteHeader(http.StatusNotImplemented)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(req); err != nil {
+		logger.Log.Debug("error encoding response", zap.Error(err))
+	}
 }

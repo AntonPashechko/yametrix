@@ -22,17 +22,17 @@ type (
 )
 
 /*Реализовываем интерфейс*/
-func (r *loggingResponseWriter) Write(b []byte) (int, error) {
+func (m *loggingResponseWriter) Write(b []byte) (int, error) {
 	// записываем ответ, используя оригинальный http.ResponseWriter
-	size, err := r.ResponseWriter.Write(b)
-	r.responseData.size += size // захватываем размер
+	size, err := m.ResponseWriter.Write(b)
+	m.responseData.size += size // захватываем размер
 	return size, err
 }
 
-func (r *loggingResponseWriter) WriteHeader(statusCode int) {
+func (m *loggingResponseWriter) WriteHeader(statusCode int) {
 	// записываем код статуса, используя оригинальный http.ResponseWriter
-	r.ResponseWriter.WriteHeader(statusCode)
-	r.responseData.status = statusCode // захватываем код статуса
+	m.ResponseWriter.WriteHeader(statusCode)
+	m.responseData.status = statusCode // захватываем код статуса
 }
 
 func Middleware(h http.Handler) http.Handler {
