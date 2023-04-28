@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"strings"
 
 	"github.com/AntonPashechko/yametrix/internal/agent/scheduler"
+	"github.com/AntonPashechko/yametrix/internal/compress"
 	"github.com/AntonPashechko/yametrix/internal/models"
 	"github.com/AntonPashechko/yametrix/internal/storage"
+	"github.com/go-resty/resty/v2"
 )
 
 const (
@@ -23,35 +23,35 @@ const (
 type httpSendWorker struct {
 	storage  storage.MetrixStorage
 	endpoint string
-	client   *http.Client
+	client   *resty.Client
 }
 
 func NewHTTPSendWorker(storage storage.MetrixStorage, endpoint string) scheduler.RecurringWorker {
 	return &httpSendWorker{
 		storage,
 		endpoint,
-		&http.Client{},
+		resty.New(),
 	}
 }
 
-func (m *httpSendWorker) createURL(mtype string, name string, value string) string {
-	urlParts := []string{m.endpoint, update, string(mtype), name, value}
-	return strings.Join(urlParts, "/")
-}
+func (m *httpSendWorker) postMetric(url string, buf []byte) error {
 
-func (m *httpSendWorker) post(url string, body io.Reader) error {
-	// пишем запрос
-	request, err := http.NewRequest(http.MethodPost, url, body)
+	buf, err := compress.GzipCompress(buf)
 	if err != nil {
-		return fmt.Errorf("cannot make http request: %w", err)
+		return fmt.Errorf("cannot compress data: %w", err)
 	}
 
-	response, err := m.client.Do(request)
+	// пишем запрос
+	_, err = m.client.R().
+		SetHeader("Content-Type", "application/json").
+		SetHeader("Content-Encoding", "gzip").
+		SetBody(buf).
+		Post(url)
+
 	if err != nil {
 		return fmt.Errorf("cannot do request: %w", err)
 	}
 
-	response.Body.Close()
 	return nil
 }
 
@@ -60,27 +60,29 @@ func (m *httpSendWorker) Work() error {
 
 	url := strings.Join([]string{m.endpoint, update}, "/")
 
-	buf := new(bytes.Buffer)
-
 	for key, value := range gauges {
+		buf := new(bytes.Buffer)
+
 		metricsDTO := models.NewMetricsDTO(key, GaugeType, nil, &value)
 		if err := json.NewEncoder(buf).Encode(metricsDTO); err != nil {
 			return fmt.Errorf("error encoding metric %w", err)
 		}
 
-		err := m.post(url, buf)
+		err := m.postMetric(url, buf.Bytes())
 		if err != nil {
 			return fmt.Errorf("cannot send gauge metric: %w", err)
 		}
 	}
 
 	for key, value := range counters {
+		buf := new(bytes.Buffer)
+
 		metricsDTO := models.NewMetricsDTO(key, CounterType, &value, nil)
 		if err := json.NewEncoder(buf).Encode(metricsDTO); err != nil {
 			return fmt.Errorf("error encoding metric %w", err)
 		}
 
-		err := m.post(url, buf)
+		err := m.postMetric(url, buf.Bytes())
 		if err != nil {
 			return fmt.Errorf("cannot send counter metric: %w", err)
 		}

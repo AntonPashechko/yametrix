@@ -15,6 +15,10 @@ type MemStorage struct {
 	counter map[string]int64
 }
 
+func (m *MemStorage) clearCounter() {
+	m.counter = make(map[string]int64)
+}
+
 func NewMemStorage() storage.MetrixStorage {
 
 	ms := &MemStorage{}
@@ -75,6 +79,8 @@ func (m *MemStorage) GetMetrixList() []string {
 func (m *MemStorage) GetMetrix() (map[string]float64, map[string]int64) {
 	m.Lock()
 	defer m.Unlock()
+
+	defer m.clearCounter()
 
 	return utils.DeepCopyMap(m.gauge), utils.DeepCopyMap(m.counter)
 }

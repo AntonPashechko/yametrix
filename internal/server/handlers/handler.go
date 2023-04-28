@@ -12,6 +12,8 @@ import (
 	"github.com/AntonPashechko/yametrix/pkg/utils"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
+
+	"github.com/AntonPashechko/yametrix/internal/compress"
 )
 
 const (
@@ -31,6 +33,8 @@ func (m *Handler) Register(router *chi.Mux) {
 
 	//Подключаем middleware логирования
 	router.Use(logger.Middleware)
+	//Подключаем middleware декомпрессии
+	router.Use(compress.Middleware)
 
 	router.Get("/", m.getAll)
 
@@ -137,11 +141,14 @@ func (m *Handler) getJSON(w http.ResponseWriter, r *http.Request) {
 func (m *Handler) updateJSON(w http.ResponseWriter, r *http.Request) {
 
 	var req models.MetricsDTO
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+
+	logger.Log.Info(req.ID)
 
 	switch req.MType {
 	case Gauge:
