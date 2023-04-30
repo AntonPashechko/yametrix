@@ -52,6 +52,7 @@ func (m *Handler) Register(router *chi.Mux) {
 func (m *Handler) getAll(w http.ResponseWriter, r *http.Request) {
 	list := m.Storage.GetMetrixList()
 
+	w.Header().Set("Content-Type", "text/html")
 	io.WriteString(w, strings.Join(list, ", "))
 }
 
