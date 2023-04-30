@@ -41,10 +41,10 @@ func (m *httpSendWorker) postMetric(url string, buf []byte) error {
 		return fmt.Errorf("cannot compress data: %w", err)
 	}
 
-	// пишем запрос
 	_, err = m.client.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Content-Encoding", "gzip").
+		SetHeader("Accept-Encoding", "gzip").
 		SetBody(buf).
 		Post(url)
 
