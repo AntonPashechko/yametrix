@@ -11,7 +11,7 @@ import (
 	"github.com/AntonPashechko/yametrix/internal/logger"
 	"github.com/AntonPashechko/yametrix/internal/scheduler"
 	"github.com/AntonPashechko/yametrix/internal/server/handlers"
-	"github.com/AntonPashechko/yametrix/internal/server/restorer"
+	"github.com/AntonPashechko/yametrix/internal/server/restorer/filerestorer"
 	memstorage "github.com/AntonPashechko/yametrix/internal/storage/memstorage"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
@@ -34,22 +34,43 @@ func runServer(ctx context.Context) {
 	router := chi.NewRouter()
 	//Хранилище метрик
 	storage := memstorage.NewMemStorage()
-	//Цепляем rest обратобчики
+	//Цепляем rest обработчики
 	metrixHandler := handlers.NewMetrixHandler(storage)
 	metrixHandler.Register(router)
 
 	//Работа по синхронизированию данных
-	restorer := restorer.NewFileRestorer(storage, options.storePath)
+	restorer := filerestorer.NewFileRestorer(storage, options.storePath)
+
+	//При штатном завершении сервера все накопленные данные должны сохраняться
+	defer func() {
+		if err := restorer.Store(); err != nil {
+			logger.Log.Error("shutdown cannot save metrics", zap.Error(err))
+		}
+	}()
+
 	//делаем restore если просят
 	if options.restore {
 		if err := restorer.Restore(); err != nil {
 			logger.Log.Error("cannot restore metrics", zap.String("file", options.storePath), zap.Error(err))
 		}
 	}
-	// запускаем шедулер периодической синхронизации
-	storeScheduler := scheduler.NewScheduler(int64(options.storeInterval), restorer)
-	defer storeScheduler.Stop()
-	go storeScheduler.Start()
+
+	var storeScheduler scheduler.Scheduler
+	defer func() {
+		//Стопаем если вообще был запущен
+		if storeScheduler != (scheduler.Scheduler{}) {
+			storeScheduler.Stop()
+		}
+	}()
+	/*Если периодичность сохранения задана - запускаем шедулер*/
+	if options.storeInterval != 0 {
+		storeScheduler = scheduler.NewScheduler(int64(options.storeInterval), restorer)
+		go storeScheduler.Start()
+	} else {
+		//Синхронизацию при storeInterval = 0 будем проводить через Middleware синхронно
+		//Передадим store handler`у,
+		metrixHandler.SetRestorer(restorer)
+	}
 
 	//Запускаем сервер
 	server := &http.Server{
@@ -71,10 +92,5 @@ func runServer(ctx context.Context) {
 
 	if err := server.Shutdown(ctx); err != nil {
 		log.Fatalf("Server Shutdown Failed:%+v", err)
-	}
-
-	//При штатном завершении сервера все накопленные данные должны сохраняться.
-	if err := restorer.SaveMetrics(); err != nil {
-		logger.Log.Error("shutdown cannot save metrics", zap.Error(err))
 	}
 }

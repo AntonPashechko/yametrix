@@ -1,9 +1,10 @@
-package restorer
+package filerestorer
 
 import (
 	"fmt"
 	"os"
 
+	"github.com/AntonPashechko/yametrix/internal/server/restorer"
 	"github.com/AntonPashechko/yametrix/internal/storage"
 )
 
@@ -12,7 +13,7 @@ type fileRestorer struct {
 	storage       storage.MetrixStorage //Хранилище метрик
 }
 
-func NewFileRestorer(storage storage.MetrixStorage, path string) *fileRestorer {
+func NewFileRestorer(storage storage.MetrixStorage, path string) restorer.MetrixRestorer {
 
 	return &fileRestorer{
 		storeFileName: path,
@@ -34,7 +35,7 @@ func (m *fileRestorer) Restore() error {
 }
 
 // Сохраняем метрики в файл
-func (m *fileRestorer) SaveMetrics() error {
+func (m *fileRestorer) Store() error {
 	if m.storeFileName == "" {
 		return nil
 	}
@@ -49,5 +50,5 @@ func (m *fileRestorer) SaveMetrics() error {
 }
 
 func (m *fileRestorer) Work() error {
-	return m.SaveMetrics()
+	return m.Store()
 }

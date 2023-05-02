@@ -8,6 +8,7 @@ import (
 
 	"github.com/AntonPashechko/yametrix/internal/logger"
 	"github.com/AntonPashechko/yametrix/internal/models"
+	"github.com/AntonPashechko/yametrix/internal/server/restorer"
 	"github.com/AntonPashechko/yametrix/internal/storage"
 	"github.com/AntonPashechko/yametrix/pkg/utils"
 	"github.com/go-chi/chi/v5"
@@ -22,11 +23,29 @@ const (
 )
 
 type Handler struct {
-	Storage storage.MetrixStorage
+	storage  storage.MetrixStorage
+	restorer restorer.MetrixRestorer
 }
 
 func NewMetrixHandler(storage storage.MetrixStorage) Handler {
-	return Handler{Storage: storage}
+	return Handler{storage: storage}
+}
+
+/*Нам нужно синхронно сохранять наши метрики кудато - примем на борт restorer и встроимся в /update/ методы*/
+func (m *Handler) SetRestorer(restorer restorer.MetrixRestorer) {
+	m.restorer = restorer
+}
+
+func (m *Handler) restoreMiddleware(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		//Вызов целевого handler
+		h.ServeHTTP(w, r)
+
+		//Синхронизируем
+		if m.restorer != nil {
+			m.restorer.Store()
+		}
+	})
 }
 
 func (m *Handler) Register(router *chi.Mux) {
@@ -38,19 +57,20 @@ func (m *Handler) Register(router *chi.Mux) {
 
 	router.Get("/", m.getAll)
 
-	router.Route("/update", func(r chi.Router) {
-		r.Post("/", m.updateJSON)
-		r.Post("/{type}/{name}/{value}", m.update)
+	router.Route("/update", func(router chi.Router) {
+		router.Use(m.restoreMiddleware)
+		router.Post("/", m.updateJSON)
+		router.Post("/{type}/{name}/{value}", m.update)
 	})
 
-	router.Route("/value", func(r chi.Router) {
-		r.Post("/", m.getJSON)
-		r.Get("/{type}/{name}", m.get)
+	router.Route("/value", func(router chi.Router) {
+		router.Post("/", m.getJSON)
+		router.Get("/{type}/{name}", m.get)
 	})
 }
 
 func (m *Handler) getAll(w http.ResponseWriter, r *http.Request) {
-	list := m.Storage.GetMetrixList()
+	list := m.storage.GetMetrixList()
 
 	w.Header().Set("Content-Type", "text/html")
 	io.WriteString(w, strings.Join(list, ", "))
@@ -62,12 +82,12 @@ func (m *Handler) get(w http.ResponseWriter, r *http.Request) {
 
 	switch mType {
 	case Gauge:
-		if value, ok := m.Storage.GetGauge(name); ok {
+		if value, ok := m.storage.GetGauge(name); ok {
 			w.Write([]byte(utils.Float64ToStr(value)))
 			return
 		}
 	case Counter:
-		if value, ok := m.Storage.GetCounter(name); ok {
+		if value, ok := m.storage.GetCounter(name); ok {
 			w.Write([]byte(utils.Int64ToStr(value)))
 			return
 		}
@@ -86,7 +106,7 @@ func (m *Handler) update(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		} else {
-			m.Storage.SetGauge(name, value)
+			m.storage.SetGauge(name, value)
 			w.WriteHeader(http.StatusOK)
 			return
 		}
@@ -95,7 +115,7 @@ func (m *Handler) update(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		} else {
-			m.Storage.AddCounter(name, value)
+			m.storage.AddCounter(name, value)
 			w.WriteHeader(http.StatusOK)
 			return
 		}
@@ -115,14 +135,14 @@ func (m *Handler) getJSON(w http.ResponseWriter, r *http.Request) {
 
 	switch req.MType {
 	case Gauge:
-		if value, ok := m.Storage.GetGauge(req.ID); ok {
+		if value, ok := m.storage.GetGauge(req.ID); ok {
 			req.SetValue(value)
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 	case Counter:
-		if detla, ok := m.Storage.GetCounter(req.ID); ok {
+		if detla, ok := m.storage.GetCounter(req.ID); ok {
 			req.SetDelta(detla)
 		} else {
 			w.WriteHeader(http.StatusNotFound)
@@ -157,15 +177,15 @@ func (m *Handler) updateJSON(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		m.Storage.SetGauge(req.ID, *req.Value)
+		m.storage.SetGauge(req.ID, *req.Value)
 	case Counter:
 		if req.Delta == nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		m.Storage.AddCounter(req.ID, *req.Delta)
-		*req.Delta, _ = m.Storage.GetCounter(req.ID)
+		m.storage.AddCounter(req.ID, *req.Delta)
+		*req.Delta, _ = m.storage.GetCounter(req.ID)
 	default:
 		w.WriteHeader(http.StatusNotImplemented)
 		return
