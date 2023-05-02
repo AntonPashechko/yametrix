@@ -9,4 +9,7 @@ type MetrixStorage interface {
 
 	GetMetrixList() []string
 	GetMetrix() (map[string]float64, map[string]int64)
+
+	Marhal() ([]byte, error)
+	Restore([]byte) error
 }

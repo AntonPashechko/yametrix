@@ -1,6 +1,7 @@
 package memstorage
 
 import (
+	"encoding/json"
 	"fmt"
 	"sync"
 
@@ -11,19 +12,19 @@ import (
 type MemStorage struct {
 	sync.Mutex
 
-	gauge   map[string]float64
-	counter map[string]int64
+	Gauge   map[string]float64
+	Counter map[string]int64
 }
 
 func (m *MemStorage) clearCounter() {
-	m.counter = make(map[string]int64)
+	m.Counter = make(map[string]int64)
 }
 
 func NewMemStorage() storage.MetrixStorage {
 
 	ms := &MemStorage{}
-	ms.gauge = make(map[string]float64)
-	ms.counter = make(map[string]int64)
+	ms.Gauge = make(map[string]float64)
+	ms.Counter = make(map[string]int64)
 
 	return ms
 }
@@ -32,21 +33,21 @@ func (m *MemStorage) SetGauge(key string, value float64) {
 	m.Lock()
 	defer m.Unlock()
 
-	m.gauge[key] = value
+	m.Gauge[key] = value
 }
 
 func (m *MemStorage) AddCounter(key string, value int64) {
 	m.Lock()
 	defer m.Unlock()
 
-	m.counter[key] += value
+	m.Counter[key] += value
 }
 
 func (m *MemStorage) GetGauge(key string) (float64, bool) {
 	m.Lock()
 	defer m.Unlock()
 
-	val, ok := m.gauge[key]
+	val, ok := m.Gauge[key]
 	return val, ok
 }
 
@@ -54,7 +55,7 @@ func (m *MemStorage) GetCounter(key string) (int64, bool) {
 	m.Lock()
 	defer m.Unlock()
 
-	val, ok := m.counter[key]
+	val, ok := m.Counter[key]
 	return val, ok
 }
 
@@ -62,14 +63,14 @@ func (m *MemStorage) GetMetrixList() []string {
 	m.Lock()
 	defer m.Unlock()
 
-	list := make([]string, 0, len(m.counter)+len(m.gauge))
+	list := make([]string, 0, len(m.Counter)+len(m.Gauge))
 
-	for name, value := range m.gauge {
+	for name, value := range m.Gauge {
 		strValue := utils.Float64ToStr(value)
 		list = append(list, fmt.Sprintf("%s = %s", name, strValue))
 	}
 
-	for name, value := range m.counter {
+	for name, value := range m.Counter {
 		list = append(list, fmt.Sprintf("%s = %d", name, value))
 	}
 
@@ -82,5 +83,28 @@ func (m *MemStorage) GetMetrix() (map[string]float64, map[string]int64) {
 
 	defer m.clearCounter()
 
-	return utils.DeepCopyMap(m.gauge), utils.DeepCopyMap(m.counter)
+	return utils.DeepCopyMap(m.Gauge), utils.DeepCopyMap(m.Counter)
+}
+
+func (m *MemStorage) Marhal() ([]byte, error) {
+	m.Lock()
+	defer m.Unlock()
+
+	data, err := json.Marshal(&m)
+	if err != nil {
+		return nil, fmt.Errorf("cannot marshal metrics: %w", err)
+	}
+
+	return data, nil
+}
+
+func (m *MemStorage) Restore(data []byte) error {
+	m.Lock()
+	defer m.Unlock()
+
+	if err := json.Unmarshal(data, m); err != nil {
+		return fmt.Errorf("cannot unmarshal metrics: %w", err)
+	}
+
+	return nil
 }

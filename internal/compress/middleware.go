@@ -6,15 +6,13 @@ import (
 	"net/http"
 	"strings"
 	"sync"
-
-	"github.com/AntonPashechko/yametrix/internal/logger"
 )
 
 // compressWriter реализует интерфейс http.ResponseWriter и позволяет прозрачно для сервера
 // сжимать передаваемые данные и выставлять правильные HTTP-заголовки
 type compressWriter struct {
-	once         sync.Once
-	isCompressed bool
+	once     sync.Once
+	compress bool
 
 	w  http.ResponseWriter
 	zw *gzip.Writer
@@ -33,12 +31,12 @@ func (c *compressWriter) needCompress() bool {
 		for _, v := range c.w.Header()["Content-Type"] {
 			if v == "application/json" || v == "text/html" {
 				c.w.Header().Set("Content-Encoding", "gzip")
-				c.isCompressed = true
+				c.compress = true
 			}
 		}
 	})
 
-	return c.isCompressed
+	return c.compress
 }
 
 func (c *compressWriter) Header() http.Header {
@@ -100,9 +98,6 @@ func Middleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		ow := w
-
-		logger.Log.Info(strings.Join(r.Header.Values("Accept-Encoding"), " "))
-
 		// проверяем, что клиент умеет получать от сервера сжатые данные в формате gzip
 		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 			// оборачиваем оригинальный http.ResponseWriter новым с поддержкой сжатия

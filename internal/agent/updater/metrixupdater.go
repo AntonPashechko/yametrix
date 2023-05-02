@@ -6,7 +6,7 @@ import (
 	"math/rand"
 	"runtime"
 
-	"github.com/AntonPashechko/yametrix/internal/agent/scheduler"
+	"github.com/AntonPashechko/yametrix/internal/scheduler"
 	"github.com/AntonPashechko/yametrix/internal/storage"
 )
 

@@ -3,7 +3,7 @@ package updater
 import (
 	"testing"
 
-	"github.com/AntonPashechko/yametrix/internal/agent/scheduler"
+	"github.com/AntonPashechko/yametrix/internal/scheduler"
 	"github.com/AntonPashechko/yametrix/internal/storage"
 	"github.com/AntonPashechko/yametrix/internal/storage/memstorage"
 	"github.com/stretchr/testify/assert"

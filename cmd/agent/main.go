@@ -5,9 +5,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/AntonPashechko/yametrix/internal/agent/scheduler"
 	"github.com/AntonPashechko/yametrix/internal/agent/sender"
 	"github.com/AntonPashechko/yametrix/internal/agent/updater"
+	"github.com/AntonPashechko/yametrix/internal/scheduler"
 	"github.com/AntonPashechko/yametrix/internal/storage/memstorage"
 )
 
