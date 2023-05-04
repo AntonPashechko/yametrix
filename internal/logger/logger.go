@@ -24,3 +24,11 @@ func Initialize(level string) error {
 	Log = zl
 	return nil
 }
+
+func Info(msg string, opt ...any) {
+	Log.Info(fmt.Sprintf(msg, opt...))
+}
+
+func Error(msg string, opt ...any) {
+	Log.Error(fmt.Sprintf(msg, opt...))
+}

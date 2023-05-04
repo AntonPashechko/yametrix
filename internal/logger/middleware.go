@@ -40,7 +40,7 @@ func Middleware(h http.Handler) http.Handler {
 		start := time.Now()
 
 		responseData := &responseData{
-			status: 200,
+			status: http.StatusOK,
 			size:   0,
 		}
 

@@ -26,7 +26,7 @@ func newCompressWriter(w http.ResponseWriter) *compressWriter {
 }
 
 /*Проверим, что контент application/json или text/html - будем пресовать*/
-func (c *compressWriter) needCompress() bool {
+func (c *compressWriter) isNeedCompress() bool {
 	c.once.Do(func() {
 		for _, v := range c.w.Header()["Content-Type"] {
 			if v == "application/json" || v == "text/html" {
@@ -44,7 +44,7 @@ func (c *compressWriter) Header() http.Header {
 }
 
 func (c *compressWriter) Write(p []byte) (int, error) {
-	if c.needCompress() {
+	if c.isNeedCompress() {
 		return c.zw.Write(p)
 	} else {
 		return c.w.Write(p)
@@ -57,7 +57,7 @@ func (c *compressWriter) WriteHeader(statusCode int) {
 
 // Close закрывает gzip.Writer и досылает все данные из буфера.
 func (c *compressWriter) Close() error {
-	if c.needCompress() {
+	if c.isNeedCompress() {
 		return c.zw.Close()
 	} else {
 		return nil

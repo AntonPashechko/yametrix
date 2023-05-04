@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/AntonPashechko/yametrix/internal/logger"
-	"go.uber.org/zap"
 )
 
 /*Планировщик и исполнитель задачи - по тику в заданном интервале запускаем работу у контролируемого объекта*/
@@ -28,7 +27,7 @@ func (m Scheduler) Start() {
 		case <-m.ticker.C:
 			err := m.worker.Work()
 			if err != nil {
-				logger.Log.Error("ERROR: cannot do the work", zap.Error(err))
+				logger.Error("ERROR: cannot do the work: %s", err)
 			}
 		case <-m.done:
 			return

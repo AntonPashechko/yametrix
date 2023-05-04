@@ -14,7 +14,6 @@ import (
 	"github.com/AntonPashechko/yametrix/internal/server/restorer"
 	memstorage "github.com/AntonPashechko/yametrix/internal/storage/memstorage"
 	"github.com/go-chi/chi/v5"
-	"go.uber.org/zap"
 )
 
 func main() {
@@ -52,7 +51,7 @@ func main() {
 		}
 	}()
 
-	logger.Log.Info("Running server", zap.String("address", cfg.Endpoint))
+	logger.Info("Running server: address %s", cfg.Endpoint)
 
 	<-ctx.Done()
 

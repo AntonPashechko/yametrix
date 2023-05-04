@@ -7,7 +7,6 @@ import (
 	"github.com/AntonPashechko/yametrix/internal/scheduler"
 	config "github.com/AntonPashechko/yametrix/internal/server/config"
 	"github.com/AntonPashechko/yametrix/internal/storage"
-	"go.uber.org/zap"
 )
 
 type RestorerType int
@@ -46,14 +45,14 @@ func Initialize(storage storage.MetrixStorage, mType RestorerType, cfg *config.C
 		case FileRestorer:
 			restorer = NewFileRestorer(storage, cfg.StorePath)
 		default:
-			logger.Log.Error("bad restore type")
+			logger.Error("bad restore type")
 			return
 		}
 
 		//делаем restore если просят
 		if cfg.Restore {
 			if err := restorer.restore(); err != nil {
-				logger.Log.Error("cannot restore metrics", zap.String("file", cfg.StorePath), zap.Error(err))
+				logger.Error("cannot restore metrics from file %s: %s", cfg.StorePath, err)
 			}
 		}
 

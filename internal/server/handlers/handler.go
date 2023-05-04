@@ -12,7 +12,6 @@ import (
 	"github.com/AntonPashechko/yametrix/internal/storage"
 	"github.com/AntonPashechko/yametrix/pkg/utils"
 	"github.com/go-chi/chi/v5"
-	"go.uber.org/zap"
 
 	"github.com/AntonPashechko/yametrix/internal/compress"
 )
@@ -75,6 +74,7 @@ func (m *Handler) get(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	logger.Error("NotFound: metric not found %s/%s", mType, name)
 	w.WriteHeader(http.StatusNotFound)
 }
 
@@ -85,6 +85,7 @@ func (m *Handler) update(w http.ResponseWriter, r *http.Request) {
 	switch mType {
 	case Gauge:
 		if value, err := utils.StrToFloat64(chi.URLParam(r, "value")); err != nil {
+			logger.Error("BadRequest: bad gauge value %s", chi.URLParam(r, "value"))
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		} else {
@@ -94,6 +95,7 @@ func (m *Handler) update(w http.ResponseWriter, r *http.Request) {
 		}
 	case Counter:
 		if value, err := utils.StrToInt64(chi.URLParam(r, "value")); err != nil {
+			logger.Error("BadRequest: bad counter value %s", chi.URLParam(r, "value"))
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		} else {
@@ -103,6 +105,7 @@ func (m *Handler) update(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	logger.Error("NotFound: unknown metric type %s", mType)
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -110,7 +113,7 @@ func (m *Handler) getJSON(w http.ResponseWriter, r *http.Request) {
 
 	var req models.MetricsDTO
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		logger.Log.Error("cannot decode request JSON body", zap.Error(err))
+		logger.Error("cannot decode request JSON body: %s", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -120,6 +123,7 @@ func (m *Handler) getJSON(w http.ResponseWriter, r *http.Request) {
 		if value, ok := m.storage.GetGauge(req.ID); ok {
 			req.SetValue(value)
 		} else {
+			logger.Error("NotFound: unknown gauge metric %s", req.ID)
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
@@ -127,17 +131,19 @@ func (m *Handler) getJSON(w http.ResponseWriter, r *http.Request) {
 		if detla, ok := m.storage.GetCounter(req.ID); ok {
 			req.SetDelta(detla)
 		} else {
+			logger.Error("NotFound: unknown counter metric %s", req.ID)
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 	default:
+		logger.Error("NotFound: unknown metric type %s", req.MType)
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(req); err != nil {
-		logger.Log.Error("error encoding response", zap.Error(err))
+		logger.Error("error encoding response: %s", err)
 	}
 }
 
@@ -146,22 +152,22 @@ func (m *Handler) updateJSON(w http.ResponseWriter, r *http.Request) {
 	var req models.MetricsDTO
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		logger.Log.Error("cannot decode request JSON body", zap.Error(err))
+		logger.Error("cannot decode request JSON body: %s", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	logger.Log.Info(req.ID)
-
 	switch req.MType {
 	case Gauge:
 		if req.Value == nil {
+			logger.Error("BadRequest: gauge value is nil")
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 		m.storage.SetGauge(req.ID, *req.Value)
 	case Counter:
 		if req.Delta == nil {
+			logger.Error("BadRequest: counter delta is nil")
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -169,12 +175,13 @@ func (m *Handler) updateJSON(w http.ResponseWriter, r *http.Request) {
 		m.storage.AddCounter(req.ID, *req.Delta)
 		*req.Delta, _ = m.storage.GetCounter(req.ID)
 	default:
+		logger.Error("NotFound: unknown metric type %s", req.MType)
 		w.WriteHeader(http.StatusNotImplemented)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(req); err != nil {
-		logger.Log.Error("error encoding response", zap.Error(err))
+		logger.Error("error encoding response: %s", err)
 	}
 }
