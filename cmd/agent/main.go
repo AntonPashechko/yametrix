@@ -5,6 +5,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/AntonPashechko/yametrix/internal/agent/config"
 	"github.com/AntonPashechko/yametrix/internal/agent/sender"
 	"github.com/AntonPashechko/yametrix/internal/agent/updater"
 	"github.com/AntonPashechko/yametrix/internal/scheduler"
@@ -17,24 +18,20 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	runAgent(ctx)
-}
-
-func runAgent(ctx context.Context) {
-
-	parseFlags()
+	cfg := new(config.Config)
+	parseFlags(cfg)
 
 	storage := memstorage.NewMemStorage()
 
 	/*Запуск шедулера обновления метрик*/
 	updateWorker := updater.NewUpdateMetrixWorker(storage)
-	pollScheduler := scheduler.NewScheduler(options.pollInterval, updateWorker)
+	pollScheduler := scheduler.NewScheduler(cfg.PollInterval, updateWorker)
 	defer pollScheduler.Stop()
 	go pollScheduler.Start()
 
 	/*Запуск шедулера отправки метрик на сервер*/
-	sendWorker := sender.NewHTTPSendWorker(storage, options.serverEndpoint)
-	reportScheduler := scheduler.NewScheduler(options.reportInterval, sendWorker)
+	sendWorker := sender.NewHTTPSendWorker(storage, cfg.ServerEndpoint)
+	reportScheduler := scheduler.NewScheduler(cfg.ReportInterval, sendWorker)
 	defer reportScheduler.Stop()
 	go reportScheduler.Start()
 

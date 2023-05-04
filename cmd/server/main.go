@@ -20,7 +20,7 @@ import (
 func main() {
 	cfg := new(config.Config)
 	if err := parseFlags(cfg); err != nil {
-		log.Fatalf("cannot parse config: %s", err)
+		log.Fatalf("cannot parse config: %s\n", err)
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -28,11 +28,12 @@ func main() {
 
 	//Инициализируем синглтон логера
 	logger.Initialize(cfg.LogLevel)
-	//Наш роутер
-	router := chi.NewRouter()
+
 	//Хранилище метрик
 	storage := memstorage.NewMemStorage()
-	//Цепляем rest обработчики
+
+	//Наш роутер, регистрируем хэндлеры
+	router := chi.NewRouter()
 	metrixHandler := handlers.NewMetrixHandler(storage)
 	metrixHandler.Register(router)
 
@@ -47,7 +48,7 @@ func main() {
 	}
 	go func() {
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("listen: %s\n", err)
+			log.Fatalf("cannot listen: %s\n", err)
 		}
 	}()
 
@@ -59,6 +60,6 @@ func main() {
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
-		log.Fatalf("Server Shutdown Failed:%+v", err)
+		log.Fatalf("Server shutdown failed:%s\n", err)
 	}
 }

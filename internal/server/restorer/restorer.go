@@ -1,7 +1,7 @@
 package restorer
 
 type MetrixRestorer interface {
-	Restore() error
-	Store() error
+	restore() error
+	store() error
 	Work() error
 }

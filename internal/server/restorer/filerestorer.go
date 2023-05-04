@@ -20,7 +20,7 @@ func NewFileRestorer(storage storage.MetrixStorage, path string) MetrixRestorer 
 	}
 }
 
-func (m *fileRestorer) Restore() error {
+func (m *fileRestorer) restore() error {
 	if m.storeFileName == "" {
 		return nil
 	}
@@ -34,7 +34,7 @@ func (m *fileRestorer) Restore() error {
 }
 
 // Сохраняем метрики в файл
-func (m *fileRestorer) Store() error {
+func (m *fileRestorer) store() error {
 	if m.storeFileName == "" {
 		return nil
 	}
@@ -49,5 +49,5 @@ func (m *fileRestorer) Store() error {
 }
 
 func (m *fileRestorer) Work() error {
-	return m.Store()
+	return m.store()
 }

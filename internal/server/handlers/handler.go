@@ -110,7 +110,7 @@ func (m *Handler) getJSON(w http.ResponseWriter, r *http.Request) {
 
 	var req models.MetricsDTO
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
+		logger.Log.Error("cannot decode request JSON body", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -137,7 +137,7 @@ func (m *Handler) getJSON(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(req); err != nil {
-		logger.Log.Debug("error encoding response", zap.Error(err))
+		logger.Log.Error("error encoding response", zap.Error(err))
 	}
 }
 
@@ -146,7 +146,7 @@ func (m *Handler) updateJSON(w http.ResponseWriter, r *http.Request) {
 	var req models.MetricsDTO
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
+		logger.Log.Error("cannot decode request JSON body", zap.Error(err))
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -175,6 +175,6 @@ func (m *Handler) updateJSON(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(req); err != nil {
-		logger.Log.Debug("error encoding response", zap.Error(err))
+		logger.Log.Error("error encoding response", zap.Error(err))
 	}
 }

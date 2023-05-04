@@ -22,9 +22,9 @@ type Manager struct {
 }
 
 func (m *Manager) store() {
-	//Если синхронная запись и шедулер не запушен
+	//Если синхронная запись и шедулер не запущен
 	if m.scheduler == (scheduler.Scheduler{}) {
-		m.restorer.Store()
+		m.restorer.store()
 	}
 }
 
@@ -52,7 +52,7 @@ func Initialize(storage storage.MetrixStorage, mType RestorerType, cfg *config.C
 
 		//делаем restore если просят
 		if cfg.Restore {
-			if err := restorer.Restore(); err != nil {
+			if err := restorer.restore(); err != nil {
 				logger.Log.Error("cannot restore metrics", zap.String("file", cfg.StorePath), zap.Error(err))
 			}
 		}
