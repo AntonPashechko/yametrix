@@ -15,11 +15,11 @@ func parseFlags(cfg *config.Config) error {
 	flag.StringVar(&cfg.Endpoint, "a", "localhost:8080", "address and port to run server")
 	flag.StringVar(&cfg.LogLevel, "l", "info", "log level")
 
-	/*flag.Uint64Var(&cfg.StoreInterval, "i", 300, "store metrics interval")
-	flag.StringVar(&cfg.StorePath, "а", "/tmp/metrics-db.json", "store metrics path")*/
+	flag.Uint64Var(&cfg.StoreInterval, "i", 300, "store metrics interval")
+	flag.StringVar(&cfg.StorePath, "а", "/tmp/metrics-db.json", "store metrics path")
 
-	flag.Uint64Var(&cfg.StoreInterval, "i", 0, "store metrics interval")
-	flag.StringVar(&cfg.StorePath, "а", "metrics-db.json", "store metrics path")
+	/*flag.Uint64Var(&cfg.StoreInterval, "i", 0, "store metrics interval")
+	flag.StringVar(&cfg.StorePath, "а", "metrics-db.json", "store metrics path")*/
 
 	flag.BoolVar(&cfg.Restore, "r", true, "is restore")
 
