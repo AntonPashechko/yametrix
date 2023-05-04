@@ -12,6 +12,7 @@ import (
 type MemStorage struct {
 	sync.Mutex
 
+	//ЗАГЛАВНЫЕ ЧТО БЫ СРАБОТАЛ json.Marshal
 	Gauge   map[string]float64
 	Counter map[string]int64
 }
@@ -86,7 +87,7 @@ func (m *MemStorage) GetMetrix() (map[string]float64, map[string]int64) {
 	return utils.DeepCopyMap(m.Gauge), utils.DeepCopyMap(m.Counter)
 }
 
-func (m *MemStorage) Marhal() ([]byte, error) {
+func (m *MemStorage) Marshal() ([]byte, error) {
 	m.Lock()
 	defer m.Unlock()
 

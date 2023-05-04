@@ -15,7 +15,9 @@ func NewMetricsDTO(id string, mType string, delta *int64, value *float64) Metric
 
 	if delta != nil {
 		mertics.SetDelta(*delta)
-	} else if value != nil {
+	}
+
+	if value != nil {
 		mertics.SetValue(*value)
 	}
 

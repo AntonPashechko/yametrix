@@ -1,10 +1,9 @@
-package filerestorer
+package restorer
 
 import (
 	"fmt"
 	"os"
 
-	"github.com/AntonPashechko/yametrix/internal/server/restorer"
 	"github.com/AntonPashechko/yametrix/internal/storage"
 )
 
@@ -13,7 +12,7 @@ type fileRestorer struct {
 	storage       storage.MetrixStorage //Хранилище метрик
 }
 
-func NewFileRestorer(storage storage.MetrixStorage, path string) restorer.MetrixRestorer {
+func NewFileRestorer(storage storage.MetrixStorage, path string) MetrixRestorer {
 
 	return &fileRestorer{
 		storeFileName: path,
@@ -41,7 +40,7 @@ func (m *fileRestorer) Store() error {
 	}
 
 	// получаем JSON формат метрик
-	data, err := m.storage.Marhal()
+	data, err := m.storage.Marshal()
 	if err != nil {
 		return fmt.Errorf("cannot get metrics: %w", err)
 	}

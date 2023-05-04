@@ -26,13 +26,13 @@ func runAgent(ctx context.Context) {
 
 	storage := memstorage.NewMemStorage()
 
-	/*Запуск шадуллера обновления метрик*/
+	/*Запуск шедулера обновления метрик*/
 	updateWorker := updater.NewUpdateMetrixWorker(storage)
 	pollScheduler := scheduler.NewScheduler(options.pollInterval, updateWorker)
 	defer pollScheduler.Stop()
 	go pollScheduler.Start()
 
-	/*Запуск шадуллера отправки метрик на сервер*/
+	/*Запуск шедулера отправки метрик на сервер*/
 	sendWorker := sender.NewHTTPSendWorker(storage, options.serverEndpoint)
 	reportScheduler := scheduler.NewScheduler(options.reportInterval, sendWorker)
 	defer reportScheduler.Stop()

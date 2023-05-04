@@ -23,29 +23,11 @@ const (
 )
 
 type Handler struct {
-	storage  storage.MetrixStorage
-	restorer restorer.MetrixRestorer
+	storage storage.MetrixStorage
 }
 
 func NewMetrixHandler(storage storage.MetrixStorage) Handler {
 	return Handler{storage: storage}
-}
-
-/*Нам нужно синхронно сохранять наши метрики кудато - примем на борт restorer и встроимся в /update/ методы*/
-func (m *Handler) SetRestorer(restorer restorer.MetrixRestorer) {
-	m.restorer = restorer
-}
-
-func (m *Handler) restoreMiddleware(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		//Вызов целевого handler
-		h.ServeHTTP(w, r)
-
-		//Синхронизируем
-		if m.restorer != nil {
-			m.restorer.Store()
-		}
-	})
 }
 
 func (m *Handler) Register(router *chi.Mux) {
@@ -58,7 +40,7 @@ func (m *Handler) Register(router *chi.Mux) {
 	router.Get("/", m.getAll)
 
 	router.Route("/update", func(router chi.Router) {
-		router.Use(m.restoreMiddleware)
+		router.Use(restorer.Middleware)
 		router.Post("/", m.updateJSON)
 		router.Post("/{type}/{name}/{value}", m.update)
 	})
