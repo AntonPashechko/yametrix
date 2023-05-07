@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	memstorage "github.com/AntonPashechko/yametrix/internal/storage/memstorage"
@@ -86,15 +87,37 @@ func TestHandler_updateJson(t *testing.T) {
 		expectedCode int
 		expectedBody string
 	}{
-		{name: "Simple test gauge", body: `{"id": "test_gauge", "type": "gauge", "value" : 123.123}`, expectedCode: http.StatusOK},
-		{name: "Simple test counter", body: `{"id": "test_counter", "type": "counter", "delta" : 2}`, expectedCode: http.StatusOK},
-
-		{name: "Empty body", expectedCode: http.StatusBadRequest},
+		{
+			name:         "Simple test gauge",
+			body:         `{"id":"test_gauge","type":"gauge","value":123.123}`,
+			expectedCode: http.StatusOK,
+			expectedBody: `{"id":"test_gauge","type":"gauge","value":123.123}`,
+		},
+		{
+			name:         "Simple test counter",
+			body:         `{"id":"test_counter","type":"counter","delta":2}`,
+			expectedCode: http.StatusOK,
+			expectedBody: `{"id":"test_counter","type":"counter","delta":2}`,
+		},
+		{
+			name:         "Simple add counter",
+			body:         `{"id":"test_counter","type":"counter","delta":2}`,
+			expectedCode: http.StatusOK,
+			expectedBody: `{"id":"test_counter","type":"counter","delta":4}`,
+		},
+		{
+			name:         "Empty body",
+			expectedCode: http.StatusBadRequest,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			resp := testRequestWithBody(t, ts, "POST", "/update/", tt.body)
 			assert.Equal(t, tt.expectedCode, resp.StatusCode(), "Код ответа не совпадает с ожидаемым")
+
+			replacer := strings.NewReplacer("\r", "", "\n", "")
+
+			assert.Equal(t, tt.expectedBody, replacer.Replace(string(resp.Body())), "Значение ответа не совпадает с ожидаемым")
 		})
 	}
 }

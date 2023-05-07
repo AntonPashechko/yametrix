@@ -122,3 +122,61 @@ func TestMemStorage_GetMetrixList(t *testing.T) {
 		})
 	}
 }
+
+func TestMemStorage_Marshal(t *testing.T) {
+	tests := []struct {
+		name string
+		m    *MemStorage
+		want string
+	}{
+		{
+			"SimpleMarshal",
+			&MemStorage{
+				Gauge: map[string]float64{
+					"MyGauge": 9.99,
+				},
+				Counter: map[string]int64{
+					"MyCounter": 10,
+				},
+			},
+			`{"Gauge":{"MyGauge":9.99},"Counter":{"MyCounter":10}}`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.m.Marshal()
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want, string(got))
+		})
+	}
+}
+
+func TestMemStorage_Restore(t *testing.T) {
+	tests := []struct {
+		name    string
+		data    string
+		wantErr bool
+	}{
+		{
+			"SimpleRestore",
+			`{"Gauge":{"MyGauge":9.99},"Counter":{"MyCounter":10}}`,
+			false,
+		},
+		{
+			"BadDataRestore",
+			`{"Gauge":{"MyGauge":9.99},"Counter":{"MyCounter":}}`,
+			true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := new(MemStorage)
+			err := m.Restore([]byte(tt.data))
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
