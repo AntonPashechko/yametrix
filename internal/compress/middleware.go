@@ -27,6 +27,8 @@ func newCompressWriter(w http.ResponseWriter) *compressWriter {
 
 /*Проверим, что контент application/json или text/html - будем пресовать*/
 func (c *compressWriter) isNeedCompress() bool {
+	/*А тут once.Do нужен для того что бы только 1 раз выставить заголовок,
+	т.к. входов в общем случаем будет много и у нас есть контроллеры в ,которых не нужен компресс*/
 	c.once.Do(func() {
 		for _, v := range c.w.Header()["Content-Type"] {
 			if v == "application/json" || v == "text/html" {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log"
 	"os/signal"
 	"syscall"
 
@@ -18,8 +19,10 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	cfg := new(config.Config)
-	parseFlags(cfg)
+	cfg, err := config.LoadAgentConfig()
+	if err != nil {
+		log.Fatalf("cannot load config: %s\n", err)
+	}
 
 	storage := memstorage.NewMemStorage()
 

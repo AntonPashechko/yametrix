@@ -6,7 +6,8 @@ import (
 	"go.uber.org/zap"
 )
 
-var Log *zap.Logger = zap.NewNop()
+// Тут мне не нравится инициализация синглтона, я бы использовал once.Do, если бы писал сам, но это я стырил с лекции и не стал переделывать
+var log *zap.Logger = zap.NewNop()
 
 func Initialize(level string) error {
 	lvl, err := zap.ParseAtomicLevel(level)
@@ -21,14 +22,14 @@ func Initialize(level string) error {
 		return fmt.Errorf("cannot build log: %w", err)
 	}
 
-	Log = zl
+	log = zl
 	return nil
 }
 
 func Info(msg string, opt ...any) {
-	Log.Info(fmt.Sprintf(msg, opt...))
+	log.Info(fmt.Sprintf(msg, opt...))
 }
 
 func Error(msg string, opt ...any) {
-	Log.Error(fmt.Sprintf(msg, opt...))
+	log.Error(fmt.Sprintf(msg, opt...))
 }

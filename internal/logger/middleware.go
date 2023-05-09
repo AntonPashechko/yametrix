@@ -55,7 +55,7 @@ func Middleware(h http.Handler) http.Handler {
 		duration := time.Since(start)
 
 		// Логируем данные запроса и результат
-		Log.Info("",
+		log.Info("",
 			zap.String("uri", r.RequestURI),
 			zap.String("method", r.Method),
 			zap.Duration("duration", duration),
