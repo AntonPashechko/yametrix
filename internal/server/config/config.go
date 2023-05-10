@@ -5,8 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-
-	"github.com/AntonPashechko/yametrix/pkg/utils"
+	"time"
 )
 
 type Config struct {
@@ -17,52 +16,74 @@ type Config struct {
 	Restore       bool
 }
 
-func LoadAgentConfig() (*Config, error) {
-	cfg := new(Config)
+func newConfig(opt options) (*Config, error) {
+	cfg := &Config{
+		Endpoint:  opt.endpoint,
+		LogLevel:  opt.logLevel,
+		StorePath: opt.storePath,
+	}
 
-	/*Разбираем командную строку*/
-	flag.StringVar(&cfg.Endpoint, "a", "localhost:8080", "address and port to run server")
-	flag.StringVar(&cfg.LogLevel, "l", "info", "log level")
+	restore, err := strconv.ParseBool(opt.restore)
+	if err != nil {
+		return nil, fmt.Errorf("bad param RESTORE: %w", err)
+	}
+	cfg.Restore = restore
 
-	flag.Uint64Var(&cfg.StoreInterval, "i", 300, "store metrics interval")
-	flag.StringVar(&cfg.StorePath, "а", "/tmp/metrics-db.json", "store metrics path")
+	duration, err := time.ParseDuration(opt.storeInterval)
+	if err != nil {
+		//return nil, fmt.Errorf("bad param STORE_INTERVAL: %w", err)
+		cfg.StoreInterval = 10
+	}
+	cfg.StoreInterval = uint64(duration.Seconds())
+
+	return cfg, nil
+}
+
+type options struct {
+	endpoint      string
+	logLevel      string
+	storeInterval string
+	storePath     string
+	restore       string
+}
+
+func LoadServerConfig() (*Config, error) {
+	var opt options
+
+	/*Разбираем командную строку сперва в структуру только со string полями*/
+	flag.StringVar(&opt.endpoint, "a", "localhost:8080", "address and port to run server")
+	flag.StringVar(&opt.logLevel, "l", "info", "log level")
+
+	flag.StringVar(&opt.storeInterval, "i", "300s", "store metrics interval")
+	flag.StringVar(&opt.storePath, "а", "/tmp/metrics-db.json", "store metrics path")
 
 	/*flag.Uint64Var(&cfg.StoreInterval, "i", 0, "store metrics interval")
 	flag.StringVar(&cfg.StorePath, "а", "metrics-db.json", "store metrics path")*/
 
-	flag.BoolVar(&cfg.Restore, "r", true, "is restore")
+	flag.StringVar(&opt.restore, "r", "true", "is restore")
 
 	flag.Parse()
 
 	/*Но если заданы в окружении - берем оттуда*/
 	if addr, exist := os.LookupEnv("ADDRESS"); exist {
-		cfg.Endpoint = addr
+		opt.endpoint = addr
 	}
 
 	if lvl, exist := os.LookupEnv("LOG_LEVEL"); exist {
-		cfg.LogLevel = lvl
+		opt.logLevel = lvl
 	}
 
 	if storeIntStr, exist := os.LookupEnv("STORE_INTERVAL"); exist {
-		interval, err := utils.StrToInt64(storeIntStr)
-		if err != nil {
-			return nil, fmt.Errorf("bad Env STORE_INTERVAL: %s", err)
-		}
-
-		cfg.StoreInterval = uint64(interval)
+		opt.storeInterval = storeIntStr
 	}
 
 	if storePath, exist := os.LookupEnv("FILE_STORAGE_PATH"); exist {
-		cfg.StorePath = storePath
+		opt.storePath = storePath
 	}
 
-	if storePath, exist := os.LookupEnv("RESTORE "); exist {
-		boolValue, err := strconv.ParseBool(storePath)
-		if err != nil {
-			return nil, fmt.Errorf("bad Env RESTORE: %s", err)
-		}
-		cfg.Restore = boolValue
+	if restore, exist := os.LookupEnv("RESTORE"); exist {
+		opt.restore = restore
 	}
 
-	return cfg, nil
+	return newConfig(opt)
 }
