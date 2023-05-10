@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	cfg, err := config.LoadAgentConfig()
+	cfg, err := config.LoadServerConfig()
 	if err != nil {
 		log.Fatalf("cannot load config: %s\n", err)
 	}
