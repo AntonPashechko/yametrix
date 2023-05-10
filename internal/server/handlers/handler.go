@@ -1,10 +1,13 @@
 package handlers
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/AntonPashechko/yametrix/internal/logger"
 	"github.com/AntonPashechko/yametrix/internal/models"
@@ -23,10 +26,14 @@ const (
 
 type Handler struct {
 	storage storage.MetrixStorage
+	db      *sql.DB
 }
 
-func NewMetrixHandler(storage storage.MetrixStorage) Handler {
-	return Handler{storage: storage}
+func NewMetrixHandler(storage storage.MetrixStorage, db *sql.DB) Handler {
+	return Handler{
+		storage: storage,
+		db:      db,
+	}
 }
 
 func (m *Handler) Register(router *chi.Mux) {
@@ -37,6 +44,10 @@ func (m *Handler) Register(router *chi.Mux) {
 	router.Use(compress.Middleware)
 
 	router.Get("/", m.getAll)
+
+	router.Route("/ping", func(router chi.Router) {
+		router.Get("/", m.pingDB)
+	})
 
 	router.Route("/update", func(router chi.Router) {
 		router.Use(restorer.Middleware)
@@ -183,5 +194,16 @@ func (m *Handler) updateJSON(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(req); err != nil {
 		logger.Error("error encoding response: %s", err)
+	}
+}
+
+func (m *Handler) pingDB(w http.ResponseWriter, r *http.Request) {
+
+	ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
+	defer cancel()
+	if err := m.db.PingContext(ctx); err != nil {
+		logger.Error("cannot ping db %s", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 }

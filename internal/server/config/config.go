@@ -16,13 +16,15 @@ type Config struct {
 	StoreInterval uint64 //0 - синхронная запись
 	StorePath     string
 	Restore       bool
+	DataBaseDNS   string
 }
 
 func newConfig(opt options) (*Config, error) {
 	cfg := &Config{
-		Endpoint:  opt.endpoint,
-		LogLevel:  opt.logLevel,
-		StorePath: opt.storePath,
+		Endpoint:    opt.endpoint,
+		LogLevel:    opt.logLevel,
+		StorePath:   opt.storePath,
+		DataBaseDNS: opt.dbDNS,
 	}
 
 	restore, err := strconv.ParseBool(opt.restore)
@@ -54,6 +56,7 @@ type options struct {
 	storeInterval string
 	storePath     string
 	restore       string
+	dbDNS         string
 }
 
 func LoadServerConfig() (*Config, error) {
@@ -67,6 +70,7 @@ func LoadServerConfig() (*Config, error) {
 	flag.StringVar(&opt.storePath, "а", "/tmp/metrics-db.json", "store metrics path")
 
 	flag.StringVar(&opt.restore, "r", "true", "is restore")
+	flag.StringVar(&opt.dbDNS, "d", "host=localhost user=postgres password=postgres dbname=postgres sslmode=disable", "db dns")
 
 	flag.Parse()
 
@@ -89,6 +93,10 @@ func LoadServerConfig() (*Config, error) {
 
 	if restore, exist := os.LookupEnv("RESTORE"); exist {
 		opt.restore = restore
+	}
+
+	if storePath, exist := os.LookupEnv("DATABASE_DSN "); exist {
+		opt.dbDNS = storePath
 	}
 
 	return newConfig(opt)

@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -29,6 +30,12 @@ func Create(cfg *config.Config) *App {
 
 	//Хранилище метрик
 	storage := memstorage.NewMemStorage()
+
+	db, err := sql.Open("pgx", cfg.DataBaseDNS)
+	if err != nil {
+		log.Fatalf("cannot create connection db: %s\n", err)
+	}
+	defer db.Close()
 
 	//Сторер
 	restorer.Initialize(storage, restorer.FileRestorer, cfg)

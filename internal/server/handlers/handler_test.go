@@ -43,7 +43,7 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string) *http.R
 func TestHandler_update(t *testing.T) {
 	storage := memstorage.NewMemStorage()
 	router := chi.NewRouter()
-	metrixHandler := NewMetrixHandler(storage)
+	metrixHandler := NewMetrixHandler(storage, nil)
 	metrixHandler.Register(router)
 
 	ts := httptest.NewServer(router)
@@ -75,7 +75,7 @@ func TestHandler_update(t *testing.T) {
 func TestHandler_updateJson(t *testing.T) {
 	storage := memstorage.NewMemStorage()
 	router := chi.NewRouter()
-	metrixHandler := NewMetrixHandler(storage)
+	metrixHandler := NewMetrixHandler(storage, nil)
 	metrixHandler.Register(router)
 
 	ts := httptest.NewServer(router)
