@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 
 	"github.com/AntonPashechko/yametrix/internal/logger"
@@ -18,6 +19,13 @@ func main() {
 	if err := logger.Initialize(cfg.LogLevel); err != nil {
 		log.Fatalf("cannot load config: %s\n", err)
 	}
+
+	data, err := json.Marshal(&cfg)
+	if err != nil {
+		logger.Error("cannot marshal metrics: %s", err)
+	}
+
+	logger.Info(string(data))
 
 	//Ошибки пока неоткуда взяться
 	app := app.Create(cfg)
