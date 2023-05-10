@@ -15,6 +15,7 @@ import (
 	"github.com/AntonPashechko/yametrix/internal/server/restorer"
 	"github.com/AntonPashechko/yametrix/internal/storage/memstorage"
 	"github.com/go-chi/chi/v5"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 const (
