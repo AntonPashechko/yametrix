@@ -44,7 +44,6 @@ func (m *httpSendWorker) postMetric(url string, buf []byte) error {
 	_, err = m.client.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Content-Encoding", "gzip").
-		SetHeader("Accept-Encoding", "gzip").
 		SetBody(buf).
 		Post(url)
 
