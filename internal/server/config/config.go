@@ -15,7 +15,6 @@ import (
 
 type Config struct {
 	Endpoint      string
-	LogLevel      string
 	StoreInterval uint64 //0 - синхронная запись
 	StorePath     string
 	Restore       bool
@@ -25,7 +24,6 @@ type Config struct {
 func newConfig(opt options) (*Config, error) {
 	cfg := &Config{
 		Endpoint:    opt.endpoint,
-		LogLevel:    opt.logLevel,
 		StorePath:   opt.storePath,
 		DataBaseDNS: opt.dbDNS,
 	}
@@ -55,7 +53,6 @@ func newConfig(opt options) (*Config, error) {
 
 type options struct {
 	endpoint      string
-	logLevel      string
 	storeInterval string
 	storePath     string
 	restore       string
@@ -69,7 +66,6 @@ func LoadServerConfig() (*Config, error) {
 
 	/*Разбираем командную строку сперва в структуру только со string полями*/
 	flag.StringVar(&opt.endpoint, "a", "localhost:8080", "address and port to run server")
-	flag.StringVar(&opt.logLevel, "l", "info", "log level")
 
 	flag.StringVar(&opt.storeInterval, "i", "300s", "store metrics interval")
 	flag.StringVar(&opt.storePath, "а", "/tmp/metrics-db.json", "store metrics path")
@@ -82,26 +78,27 @@ func LoadServerConfig() (*Config, error) {
 	/*Но если заданы в окружении - берем оттуда*/
 	if addr, exist := os.LookupEnv("ADDRESS"); exist {
 		opt.endpoint = addr
-	}
-
-	if lvl, exist := os.LookupEnv("LOG_LEVEL"); exist {
-		opt.logLevel = lvl
+		logger.Info("ADDRESS env: %s", addr)
 	}
 
 	if storeIntStr, exist := os.LookupEnv("STORE_INTERVAL"); exist {
 		opt.storeInterval = storeIntStr
+		logger.Info("STORE_INTERVAL env: %s", storeIntStr)
 	}
 
 	if storePath, exist := os.LookupEnv("FILE_STORAGE_PATH"); exist {
 		opt.storePath = storePath
+		logger.Info("FILE_STORAGE_PATH env: %s", storePath)
 	}
 
 	if restore, exist := os.LookupEnv("RESTORE"); exist {
 		opt.restore = restore
+		logger.Info("RESTORE env: %s", restore)
 	}
 
-	if storePath, exist := os.LookupEnv("DATABASE_DSN "); exist {
-		opt.dbDNS = storePath
+	if dns, exist := os.LookupEnv("DATABASE_DSN"); exist {
+		logger.Info("DATABASE_DSN env: %s", dns)
+		opt.dbDNS = dns
 	}
 
 	return newConfig(opt)
