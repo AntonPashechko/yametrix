@@ -24,6 +24,7 @@ const (
 
 type App struct {
 	server     *http.Server
+	db         *sql.DB
 	notifyStop context.CancelFunc
 }
 
@@ -36,7 +37,6 @@ func Create(cfg *config.Config) *App {
 	if err != nil {
 		log.Fatalf("cannot create connection db: %s\n", err)
 	}
-	defer db.Close()
 
 	//Сторер
 	restorer.Initialize(storage, restorer.FileRestorer, cfg)
@@ -51,6 +51,7 @@ func Create(cfg *config.Config) *App {
 			Addr:    cfg.Endpoint,
 			Handler: router,
 		},
+		db: db,
 	}
 
 	return app
@@ -70,6 +71,7 @@ func (m *App) ServerDone() <-chan struct{} {
 
 func (m *App) Shutdown() error {
 	defer m.notifyStop()
+	defer m.db.Close()
 	defer restorer.Shutdown()
 
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTime)
