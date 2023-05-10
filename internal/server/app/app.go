@@ -42,7 +42,7 @@ func Create(cfg *config.Config) *App {
 
 	//Наш роутер, регистрируем хэндлеры
 	router := chi.NewRouter()
-	metrixHandler := handlers.NewMetrixHandler(storage)
+	metrixHandler := handlers.NewMetrixHandler(storage, db)
 	metrixHandler.Register(router)
 
 	app := &App{
