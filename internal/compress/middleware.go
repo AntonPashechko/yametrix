@@ -11,8 +11,7 @@ import (
 // compressWriter реализует интерфейс http.ResponseWriter и позволяет прозрачно для сервера
 // сжимать передаваемые данные и выставлять правильные HTTP-заголовки
 type compressWriter struct {
-	once     sync.Once
-	compress bool
+	once sync.Once
 
 	w  http.ResponseWriter
 	zw *gzip.Writer
@@ -20,36 +19,30 @@ type compressWriter struct {
 
 func newCompressWriter(w http.ResponseWriter) *compressWriter {
 	return &compressWriter{
-		w:  w,
-		zw: gzip.NewWriter(w),
+		w: w,
 	}
 }
 
-/*Проверим, что контент application/json или text/html - будем пресовать*/
-func (c *compressWriter) isNeedCompress() bool {
-	/*А тут once.Do нужен для того что бы только 1 раз выставить заголовок,
-	т.к. входов в общем случаем будет много и у нас есть контроллеры в ,которых не нужен компресс*/
-	c.once.Do(func() {
-		for _, v := range c.w.Header()["Content-Type"] {
+func (m *compressWriter) Header() http.Header {
+	return m.w.Header()
+}
+
+func (m *compressWriter) Write(p []byte) (int, error) {
+	//Перед началом отгрузки данных надо проверить тип данных, и если можно сжимать - ставим заголовок и создаем
+	m.once.Do(func() {
+		for _, v := range m.w.Header()["Content-Type"] {
 			if v == "application/json" || v == "text/html" {
-				c.w.Header().Set("Content-Encoding", "gzip")
-				c.compress = true
+				m.w.Header().Set("Content-Encoding", "gzip")
+				m.zw = gzip.NewWriter(m.w)
+				break
 			}
 		}
 	})
 
-	return c.compress
-}
-
-func (c *compressWriter) Header() http.Header {
-	return c.w.Header()
-}
-
-func (c *compressWriter) Write(p []byte) (int, error) {
-	if c.isNeedCompress() {
-		return c.zw.Write(p)
+	if m.zw != nil {
+		return m.zw.Write(p)
 	} else {
-		return c.w.Write(p)
+		return m.w.Write(p)
 	}
 }
 
@@ -58,9 +51,9 @@ func (c *compressWriter) WriteHeader(statusCode int) {
 }
 
 // Close закрывает gzip.Writer и досылает все данные из буфера.
-func (c *compressWriter) Close() error {
-	if c.isNeedCompress() {
-		return c.zw.Close()
+func (m *compressWriter) Close() error {
+	if m.zw != nil {
+		return m.zw.Close()
 	} else {
 		return nil
 	}

@@ -65,6 +65,7 @@ func (m *Handler) getAll(w http.ResponseWriter, r *http.Request) {
 	list := m.storage.GetMetrixList()
 
 	w.Header().Set("Content-Type", "text/html")
+	//w.WriteHeader(http.StatusOK)
 	io.WriteString(w, strings.Join(list, ", "))
 }
 

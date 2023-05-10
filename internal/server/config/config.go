@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
+
+	"github.com/AntonPashechko/yametrix/internal/logger"
 
 	"github.com/AntonPashechko/yametrix/pkg/utils"
 )
@@ -60,6 +63,8 @@ type options struct {
 }
 
 func LoadServerConfig() (*Config, error) {
+
+	logger.Info(strings.Join(os.Args, " "))
 	var opt options
 
 	/*Разбираем командную строку сперва в структуру только со string полями*/
