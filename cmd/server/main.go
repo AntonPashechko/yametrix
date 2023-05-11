@@ -16,7 +16,6 @@ func main() {
 
 	//Инициализируем синглтон логера
 	if err := logger.Initialize(cfg.LogLevel); err != nil {
-		//Тут я считаю, что без логера можно жить себе спокойно... ну да ладно
 		log.Fatalf("cannot load config: %s\n", err)
 	}
 
@@ -30,7 +29,7 @@ func main() {
 	<-app.ServerDone()
 
 	if err := app.Shutdown(); err != nil {
-		log.Fatalf("Server shutdown failed:%s\n", err)
+		logger.Error("Server shutdown failed: %s", err)
 	}
 
 	logger.Info("Server has benn shutdown")

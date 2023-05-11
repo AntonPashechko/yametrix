@@ -12,9 +12,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func testRequest(t *testing.T, ts *httptest.Server, body []byte, gzipReq bool) *resty.Response {
+func testRequest(t *testing.T, ts *httptest.Server, body []byte, gzipReq bool, gzipResp bool) *resty.Response {
 
-	req := resty.New().R()
+	transport := http.Transport{
+		DisableCompression: true,
+	}
+
+	client := resty.New()
+	client.SetTransport(&transport)
+
+	req := client.R()
 	req.Method = "POST"
 	req.URL = ts.URL + "/test"
 	req.SetHeader("Content-Type", "text/html")
@@ -25,6 +32,10 @@ func testRequest(t *testing.T, ts *httptest.Server, body []byte, gzipReq bool) *
 		req.SetHeader("Content-Encoding", "gzip")
 	}
 	req.SetBody(content)
+
+	if gzipResp {
+		req.SetHeader("Accept-Encoding", "gzip")
+	}
 
 	resp, err := req.Send()
 	require.NoError(t, err)
@@ -52,18 +63,20 @@ func TestMiddleware(t *testing.T) {
 	defer ts.Close()
 
 	tests := []struct {
-		name string
-		gzip bool
+		name     string
+		gzipReq  bool
+		gzipResp bool
 	}{
-		{"test no gzip", false},
-		{"test gzip", true},
+		{"test no gzip", false, false},
+		{"test gzip req only", true, false},
+		{"test gzip resp only", false, true},
+		{"test all gzip", true, true},
 
-		//На вервер всегда прилетает заголовок ("Accept-Encoding", "gzip"), что бы я не делал, как это отключить?
-
+		//На cервер всегда прилетает заголовок ("Accept-Encoding", "gzip"), что бы я не делал, как это отключить?
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp := testRequest(t, ts, []byte("Mike"), tt.gzip)
+			resp := testRequest(t, ts, []byte("Mike"), tt.gzipReq, tt.gzipResp)
 			assert.Equal(t, http.StatusOK, resp.StatusCode(), "Код ответа не совпадает с ожидаемым")
 
 			assert.Equal(t, "Hello, Mike!", string(resp.Body()), "Содержимое ответа не совпадает с ожидаемым")

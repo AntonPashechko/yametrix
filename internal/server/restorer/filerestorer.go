@@ -21,10 +21,6 @@ func NewFileRestorer(storage storage.MetrixStorage, path string) MetrixRestorer 
 }
 
 func (m *fileRestorer) restore() error {
-	if m.storeFileName == "" {
-		return nil
-	}
-
 	data, err := os.ReadFile(m.storeFileName)
 	if err != nil {
 		return fmt.Errorf("cannot read store file: %w", err)
@@ -35,10 +31,6 @@ func (m *fileRestorer) restore() error {
 
 // Сохраняем метрики в файл
 func (m *fileRestorer) store() error {
-	if m.storeFileName == "" {
-		return nil
-	}
-
 	// получаем JSON формат метрик
 	data, err := m.storage.Marshal()
 	if err != nil {

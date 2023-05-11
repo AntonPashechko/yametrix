@@ -6,6 +6,8 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/AntonPashechko/yametrix/pkg/utils"
 )
 
 type Config struct {
@@ -29,12 +31,19 @@ func newConfig(opt options) (*Config, error) {
 	}
 	cfg.Restore = restore
 
+	//В тестах на гитхаб данный параметр от инкремента к инкременту задается по разному, или 10 или 10s
+	//Буду тогда по очереди пытаться его разобрать, сперва как 10s
 	duration, err := time.ParseDuration(opt.storeInterval)
 	if err != nil {
-		//return nil, fmt.Errorf("bad param STORE_INTERVAL: %w", err)
-		cfg.StoreInterval = 10
+		//Теперь как 10
+		duration, err := utils.StrToInt64(opt.storeInterval)
+		if err != nil {
+			return nil, fmt.Errorf("bad param STORE_INTERVAL: %w", err)
+		}
+		cfg.StoreInterval = uint64(duration)
+	} else {
+		cfg.StoreInterval = uint64(duration.Seconds())
 	}
-	cfg.StoreInterval = uint64(duration.Seconds())
 
 	return cfg, nil
 }
@@ -56,9 +65,6 @@ func LoadServerConfig() (*Config, error) {
 
 	flag.StringVar(&opt.storeInterval, "i", "300s", "store metrics interval")
 	flag.StringVar(&opt.storePath, "а", "/tmp/metrics-db.json", "store metrics path")
-
-	/*flag.Uint64Var(&cfg.StoreInterval, "i", 0, "store metrics interval")
-	flag.StringVar(&cfg.StorePath, "а", "metrics-db.json", "store metrics path")*/
 
 	flag.StringVar(&opt.restore, "r", "true", "is restore")
 
