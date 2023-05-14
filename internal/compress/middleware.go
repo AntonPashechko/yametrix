@@ -46,8 +46,8 @@ func (m *compressWriter) Write(p []byte) (int, error) {
 	}
 }
 
-func (c *compressWriter) WriteHeader(statusCode int) {
-	c.w.WriteHeader(statusCode)
+func (m *compressWriter) WriteHeader(statusCode int) {
+	m.w.WriteHeader(statusCode)
 }
 
 // Close закрывает gzip.Writer и досылает все данные из буфера.
