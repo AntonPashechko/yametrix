@@ -66,22 +66,22 @@ func TestMemStorage_GetCounter(t *testing.T) {
 	}
 }
 
-func TestMemStorage_GetMetrixList(t *testing.T) {
+func TestMemStorage_GetMetricsList(t *testing.T) {
 
-	type metrix struct {
+	type metrics struct {
 		gauge   map[string]float64
 		counter map[string]int64
 	}
 
 	tests := []struct {
 		name   string
-		start  metrix
+		start  metrics
 		isWant bool
 		result []string
 	}{
 		{
-			name: "SimpleGetMetrixList",
-			start: metrix{
+			name: "SimpleGetMetricsList",
+			start: metrics{
 				gauge: map[string]float64{
 					"MyGauge": 9.99,
 				},
@@ -96,7 +96,7 @@ func TestMemStorage_GetMetrixList(t *testing.T) {
 			},
 		},
 		{
-			name:   "EmptyMetrixList",
+			name:   "EmptyMetricsList",
 			isWant: false,
 		},
 	}
@@ -110,7 +110,7 @@ func TestMemStorage_GetMetrixList(t *testing.T) {
 				storage.AddCounter(k, c)
 			}
 
-			list := storage.GetMetrixList()
+			list := storage.GetMetricsList()
 
 			if tt.isWant {
 				if assert.NotEmpty(t, list) {

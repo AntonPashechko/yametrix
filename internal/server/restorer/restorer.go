@@ -1,6 +1,6 @@
 package restorer
 
-type MetrixRestorer interface {
+type MetricsRestorer interface {
 	restore() error
 	store() error
 	Work() error

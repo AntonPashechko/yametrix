@@ -9,27 +9,27 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewUpdateMetrixWorker(t *testing.T) {
+func TestNewUpdateMetricsWorker(t *testing.T) {
 	type args struct {
-		storage storage.MetrixStorage
+		storage storage.MetricsStorage
 	}
 	tests := []struct {
 		name string
 	}{
-		{"createUpdateMetrixWorker"},
+		{"createupdateMetricsWorker"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			upd := NewUpdateMetrixWorker(memstorage.NewMemStorage())
+			upd := NewUpdateMetricsWorker(memstorage.NewMemStorage())
 			assert.NotEmpty(t, upd)
 		})
 	}
 }
 
-func Test_updateMetrixWorker_Work(t *testing.T) {
+func Test_updateMetricsWorker_Work(t *testing.T) {
 
 	storage := memstorage.NewMemStorage()
-	updateWorker := NewUpdateMetrixWorker(storage)
+	updateWorker := NewUpdateMetricsWorker(storage)
 
 	tests := []struct {
 		name    string

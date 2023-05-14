@@ -27,7 +27,7 @@ func main() {
 	storage := memstorage.NewMemStorage()
 
 	/*Запуск шедулера обновления метрик*/
-	updateWorker := updater.NewUpdateMetrixWorker(storage)
+	updateWorker := updater.NewUpdateMetricsWorker(storage)
 	pollScheduler := scheduler.NewScheduler(cfg.PollInterval, updateWorker)
 	defer pollScheduler.Stop()
 	go pollScheduler.Start()

@@ -8,11 +8,11 @@ import (
 )
 
 type fileRestorer struct {
-	storeFileName string                //Имя файла для синхронизации данных
-	storage       storage.MetrixStorage //Хранилище метрик
+	storeFileName string                 //Имя файла для синхронизации данных
+	storage       storage.MetricsStorage //Хранилище метрик
 }
 
-func NewFileRestorer(storage storage.MetrixStorage, path string) MetrixRestorer {
+func NewFileRestorer(storage storage.MetricsStorage, path string) MetricsRestorer {
 
 	return &fileRestorer{
 		storeFileName: path,

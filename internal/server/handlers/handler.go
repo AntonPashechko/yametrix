@@ -25,11 +25,11 @@ const (
 )
 
 type Handler struct {
-	storage storage.MetrixStorage
+	storage storage.MetricsStorage
 	db      *sql.DB
 }
 
-func NewMetrixHandler(storage storage.MetrixStorage, db *sql.DB) Handler {
+func NewMetricsHandler(storage storage.MetricsStorage, db *sql.DB) Handler {
 	return Handler{
 		storage: storage,
 		db:      db,
@@ -62,7 +62,7 @@ func (m *Handler) Register(router *chi.Mux) {
 }
 
 func (m *Handler) getAll(w http.ResponseWriter, r *http.Request) {
-	list := m.storage.GetMetrixList()
+	list := m.storage.GetMetricsList()
 
 	w.Header().Set("Content-Type", "text/html")
 	//w.WriteHeader(http.StatusOK)

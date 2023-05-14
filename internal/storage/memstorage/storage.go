@@ -21,7 +21,7 @@ func (m *MemStorage) clearCounter() {
 	m.Counter = make(map[string]int64)
 }
 
-func NewMemStorage() storage.MetrixStorage {
+func NewMemStorage() storage.MetricsStorage {
 
 	ms := &MemStorage{}
 	ms.Gauge = make(map[string]float64)
@@ -60,7 +60,7 @@ func (m *MemStorage) GetCounter(key string) (int64, bool) {
 	return val, ok
 }
 
-func (m *MemStorage) GetMetrixList() []string {
+func (m *MemStorage) GetMetricsList() []string {
 	m.Lock()
 	defer m.Unlock()
 
@@ -78,7 +78,7 @@ func (m *MemStorage) GetMetrixList() []string {
 	return list
 }
 
-func (m *MemStorage) GetMetrix() (map[string]float64, map[string]int64) {
+func (m *MemStorage) GetMetrics() (map[string]float64, map[string]int64) {
 	m.Lock()
 	defer m.Unlock()
 

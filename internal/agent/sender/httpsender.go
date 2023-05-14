@@ -21,12 +21,12 @@ const (
 )
 
 type httpSendWorker struct {
-	storage  storage.MetrixStorage
+	storage  storage.MetricsStorage
 	endpoint string
 	client   *resty.Client
 }
 
-func NewHTTPSendWorker(storage storage.MetrixStorage, endpoint string) scheduler.RecurringWorker {
+func NewHTTPSendWorker(storage storage.MetricsStorage, endpoint string) scheduler.RecurringWorker {
 	return &httpSendWorker{
 		storage,
 		endpoint,
@@ -55,7 +55,7 @@ func (m *httpSendWorker) postMetric(url string, buf []byte) error {
 }
 
 func (m *httpSendWorker) Work() error {
-	gauges, counters := m.storage.GetMetrix()
+	gauges, counters := m.storage.GetMetrics()
 
 	url := strings.Join([]string{m.endpoint, update}, "/")
 

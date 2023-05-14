@@ -16,7 +16,7 @@ const (
 )
 
 type Manager struct {
-	restorer  MetrixRestorer
+	restorer  MetricsRestorer
 	scheduler scheduler.Scheduler
 }
 
@@ -39,10 +39,10 @@ func (m *Manager) shutdown() {
 var instance *Manager
 var once sync.Once
 
-func Initialize(storage storage.MetrixStorage, mType RestorerType, cfg *config.Config) {
+func Initialize(storage storage.MetricsStorage, mType RestorerType, cfg *config.Config) {
 	//Ресторер используем как синглтон, потому тут я применяю sync.Once, считаю эту конструкцию наиболее подходящей для задачи инициализации синглтона
 	once.Do(func() {
-		var restorer MetrixRestorer
+		var restorer MetricsRestorer
 
 		switch mType {
 		case FileRestorer:

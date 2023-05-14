@@ -30,22 +30,22 @@ func randFloats() float64 {
 	return floatMin + rand.Float64()*(floatMax-floatMin)
 }
 
-type updateMetrixWorker struct {
-	storage storage.MetrixStorage
+type updateMetricsWorker struct {
+	storage storage.MetricsStorage
 }
 
-func (m *updateMetrixWorker) Work() error {
+func (m *updateMetricsWorker) Work() error {
 	mem := new(runtime.MemStats)
 	runtime.ReadMemStats(mem)
 
 	/*Делаем json, что бы было убоднее пройтись по нужным метрикам*/
-	jMetrix, err := json.Marshal(mem)
+	jMetrics, err := json.Marshal(mem)
 	if err != nil {
 		return fmt.Errorf("cannot marshal json: %w", err)
 	}
 
 	var fields map[string]interface{}
-	err = json.Unmarshal(jMetrix, &fields)
+	err = json.Unmarshal(jMetrics, &fields)
 	if err != nil {
 		return fmt.Errorf("cannot unmarshal json: %w", err)
 	}
@@ -60,6 +60,6 @@ func (m *updateMetrixWorker) Work() error {
 	return nil
 }
 
-func NewUpdateMetrixWorker(storage storage.MetrixStorage) scheduler.RecurringWorker {
-	return &updateMetrixWorker{storage: storage}
+func NewUpdateMetricsWorker(storage storage.MetricsStorage) scheduler.RecurringWorker {
+	return &updateMetricsWorker{storage: storage}
 }
