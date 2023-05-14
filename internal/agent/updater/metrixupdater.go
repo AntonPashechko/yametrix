@@ -6,13 +6,14 @@ import (
 	"math/rand"
 	"runtime"
 
+	"github.com/AntonPashechko/yametrix/internal/models"
 	"github.com/AntonPashechko/yametrix/internal/scheduler"
 	"github.com/AntonPashechko/yametrix/internal/storage"
 )
 
 const (
-	PollCount   = "PollCount"
-	RandomValue = "RandomValue"
+	pollCount   = "PollCount"
+	randomValue = "RandomValue"
 
 	floatMin = 1.10
 	floatMax = 101.98
@@ -51,11 +52,11 @@ func (m *updateMetricsWorker) Work() error {
 	}
 
 	for _, gaugeName := range RuntimeGaugesName {
-		m.storage.SetGauge(gaugeName, fields[gaugeName].(float64))
+		m.storage.SetGauge(models.NewGaugeMetric(gaugeName, fields[gaugeName].(float64)))
 	}
 
-	m.storage.AddCounter(PollCount, 1)
-	m.storage.SetGauge(RandomValue, randFloats())
+	m.storage.AddCounter(models.NewCounterMetric(pollCount, 1))
+	m.storage.SetGauge(models.NewGaugeMetric(randomValue, randFloats()))
 
 	return nil
 }

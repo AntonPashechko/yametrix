@@ -10,6 +10,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/AntonPashechko/yametrix/internal/compress"
+	"github.com/AntonPashechko/yametrix/internal/logger"
 	"github.com/AntonPashechko/yametrix/internal/server/config"
 	"github.com/AntonPashechko/yametrix/internal/server/handlers"
 	"github.com/AntonPashechko/yametrix/internal/server/restorer"
@@ -43,6 +45,11 @@ func Create(cfg *config.Config) *App {
 
 	//Наш роутер, регистрируем хэндлеры
 	router := chi.NewRouter()
+	//Подключаем middleware логирования
+	router.Use(logger.Middleware)
+	//Подключаем middleware декомпрессии
+	router.Use(compress.Middleware)
+
 	metricsHandler := handlers.NewMetricsHandler(storage, db)
 	metricsHandler.Register(router)
 

@@ -1,5 +1,10 @@
 package models
 
+const (
+	GaugeType   = "gauge"
+	CounterType = "counter"
+)
+
 type MetricsDTO struct {
 	ID    string   `json:"id"`              // имя метрики
 	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
@@ -7,19 +12,24 @@ type MetricsDTO struct {
 	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
 }
 
-func NewMetricsDTO(id string, mType string, delta *int64, value *float64) MetricsDTO {
+func NewGaugeMetric(id string, value float64) MetricsDTO {
 	mertics := MetricsDTO{
 		ID:    id,
-		MType: mType,
+		MType: GaugeType,
 	}
 
-	if delta != nil {
-		mertics.SetDelta(*delta)
+	mertics.SetValue(value)
+
+	return mertics
+}
+
+func NewCounterMetric(id string, delta int64) MetricsDTO {
+	mertics := MetricsDTO{
+		ID:    id,
+		MType: CounterType,
 	}
 
-	if value != nil {
-		mertics.SetValue(*value)
-	}
+	mertics.SetDelta(delta)
 
 	return mertics
 }

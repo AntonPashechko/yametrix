@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/AntonPashechko/yametrix/internal/models"
 	"github.com/AntonPashechko/yametrix/internal/storage"
 	"github.com/AntonPashechko/yametrix/pkg/utils"
 )
@@ -13,38 +14,45 @@ type MemStorage struct {
 	sync.Mutex
 
 	//ЗАГЛАВНЫЕ ЧТО БЫ СРАБОТАЛ json.Marshal
-	Gauge   map[string]float64
-	Counter map[string]int64
+	Gauge   map[string]models.MetricsDTO
+	Counter map[string]models.MetricsDTO
 }
 
 func (m *MemStorage) clearCounter() {
-	m.Counter = make(map[string]int64)
+	/*m.Counter = make(map[string]int64)*/
 }
 
 func NewMemStorage() storage.MetricsStorage {
 
 	ms := &MemStorage{}
-	ms.Gauge = make(map[string]float64)
-	ms.Counter = make(map[string]int64)
+	ms.Gauge = make(map[string]models.MetricsDTO)
+	ms.Counter = make(map[string]models.MetricsDTO)
 
 	return ms
 }
 
-func (m *MemStorage) SetGauge(key string, value float64) {
+func (m *MemStorage) SetGauge(metric models.MetricsDTO) {
 	m.Lock()
 	defer m.Unlock()
 
-	m.Gauge[key] = value
+	m.Gauge[metric.ID] = metric
 }
 
-func (m *MemStorage) AddCounter(key string, value int64) {
+func (m *MemStorage) AddCounter(metric models.MetricsDTO) models.MetricsDTO {
 	m.Lock()
 	defer m.Unlock()
 
-	m.Counter[key] += value
+	_, ok := m.Counter[metric.ID]
+	if ok {
+		*m.Counter[metric.ID].Delta += *metric.Delta
+	} else {
+		m.Counter[metric.ID] = metric
+	}
+
+	return m.Counter[metric.ID]
 }
 
-func (m *MemStorage) GetGauge(key string) (float64, bool) {
+func (m *MemStorage) GetGauge(key string) (models.MetricsDTO, bool) {
 	m.Lock()
 	defer m.Unlock()
 
@@ -52,7 +60,7 @@ func (m *MemStorage) GetGauge(key string) (float64, bool) {
 	return val, ok
 }
 
-func (m *MemStorage) GetCounter(key string) (int64, bool) {
+func (m *MemStorage) GetCounter(key string) (models.MetricsDTO, bool) {
 	m.Lock()
 	defer m.Unlock()
 
@@ -66,25 +74,35 @@ func (m *MemStorage) GetMetricsList() []string {
 
 	list := make([]string, 0, len(m.Counter)+len(m.Gauge))
 
-	for name, value := range m.Gauge {
-		strValue := utils.Float64ToStr(value)
+	for name, metric := range m.Gauge {
+		strValue := utils.Float64ToStr(*metric.Value)
 		list = append(list, fmt.Sprintf("%s = %s", name, strValue))
 	}
 
-	for name, value := range m.Counter {
-		list = append(list, fmt.Sprintf("%s = %d", name, value))
+	for name, metric := range m.Counter {
+		list = append(list, fmt.Sprintf("%s = %d", name, *metric.Delta))
 	}
 
 	return list
 }
 
-func (m *MemStorage) GetMetrics() (map[string]float64, map[string]int64) {
+func (m *MemStorage) GetAllMetrics() []models.MetricsDTO {
 	m.Lock()
 	defer m.Unlock()
 
-	defer m.clearCounter()
+	metrics := make([]models.MetricsDTO, 0)
 
-	return utils.DeepCopyMap(m.Gauge), utils.DeepCopyMap(m.Counter)
+	for _, metric := range m.Gauge {
+		metrics = append(metrics, metric)
+	}
+
+	for _, metric := range m.Counter {
+		metrics = append(metrics, metric)
+	}
+
+	//defer m.clearCounter()
+
+	return metrics
 }
 
 func (m *MemStorage) Marshal() ([]byte, error) {

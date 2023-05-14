@@ -1,14 +1,16 @@
 package storage
 
-type MetricsStorage interface {
-	SetGauge(string, float64)
-	AddCounter(string, int64)
+import "github.com/AntonPashechko/yametrix/internal/models"
 
-	GetGauge(string) (float64, bool)
-	GetCounter(string) (int64, bool)
+type MetricsStorage interface {
+	SetGauge(metric models.MetricsDTO)
+	AddCounter(metric models.MetricsDTO) models.MetricsDTO
+
+	GetGauge(key string) (models.MetricsDTO, bool)
+	GetCounter(key string) (models.MetricsDTO, bool)
 
 	GetMetricsList() []string
-	GetMetrics() (map[string]float64, map[string]int64)
+	GetAllMetrics() []models.MetricsDTO
 
 	Marshal() ([]byte, error)
 	Restore([]byte) error
