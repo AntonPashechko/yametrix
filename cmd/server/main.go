@@ -19,8 +19,11 @@ func main() {
 		log.Fatalf("cannot load config: %s\n", err)
 	}
 
-	//Ошибки пока неоткуда взяться
-	app := app.Create(cfg)
+	app, err := app.Create(cfg)
+	if err != nil {
+		logger.Error("cannot create app: %s", err)
+		return
+	}
 
 	go app.Run()
 

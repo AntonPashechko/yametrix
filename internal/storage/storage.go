@@ -1,17 +1,19 @@
 package storage
 
-import "github.com/AntonPashechko/yametrix/internal/models"
+import (
+	"context"
+
+	"github.com/AntonPashechko/yametrix/internal/models"
+)
 
 type MetricsStorage interface {
-	SetGauge(metric models.MetricsDTO)
-	AddCounter(metric models.MetricsDTO) models.MetricsDTO
+	SetGauge(context.Context, models.MetricDTO) error
+	AddCounter(context.Context, models.MetricDTO) (*models.MetricDTO, error)
 
-	GetGauge(key string) (models.MetricsDTO, bool)
-	GetCounter(key string) (models.MetricsDTO, bool)
+	GetGauge(context.Context, string) (*models.MetricDTO, error)
+	GetCounter(context.Context, string) (*models.MetricDTO, error)
+	GetMetricsList(context.Context) []string
 
-	GetMetricsList() []string
-	GetAllMetrics() []models.MetricsDTO
-
-	Marshal() ([]byte, error)
-	Restore([]byte) error
+	PingStorage(context.Context) error
+	Close()
 }

@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/AntonPashechko/yametrix/internal/storage"
+	"github.com/AntonPashechko/yametrix/internal/storage/memstorage"
 )
 
 type fileRestorer struct {
-	storeFileName string                 //Имя файла для синхронизации данных
-	storage       storage.MetricsStorage //Хранилище метрик
+	storeFileName string              //Имя файла для синхронизации данных
+	storage       *memstorage.Storage //Хранилище метрик
 }
 
-func NewFileRestorer(storage storage.MetricsStorage, path string) MetricsRestorer {
+func NewFileRestorer(storage *memstorage.Storage, path string) MetricsRestorer {
 
 	return &fileRestorer{
 		storeFileName: path,

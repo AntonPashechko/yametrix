@@ -8,7 +8,7 @@ import (
 
 	"github.com/AntonPashechko/yametrix/internal/compress"
 	"github.com/AntonPashechko/yametrix/internal/scheduler"
-	"github.com/AntonPashechko/yametrix/internal/storage"
+	"github.com/AntonPashechko/yametrix/internal/storage/memstorage"
 	"github.com/go-resty/resty/v2"
 )
 
@@ -20,12 +20,12 @@ const (
 )
 
 type httpSendWorker struct {
-	storage  storage.MetricsStorage
+	storage  *memstorage.Storage
 	endpoint string
 	client   *resty.Client
 }
 
-func NewHTTPSendWorker(storage storage.MetricsStorage, endpoint string) scheduler.RecurringWorker {
+func NewHTTPSendWorker(storage *memstorage.Storage, endpoint string) scheduler.RecurringWorker {
 	return &httpSendWorker{
 		storage,
 		endpoint,

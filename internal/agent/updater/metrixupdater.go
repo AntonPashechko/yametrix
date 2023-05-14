@@ -1,6 +1,7 @@
 package updater
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math/rand"
@@ -8,7 +9,7 @@ import (
 
 	"github.com/AntonPashechko/yametrix/internal/models"
 	"github.com/AntonPashechko/yametrix/internal/scheduler"
-	"github.com/AntonPashechko/yametrix/internal/storage"
+	"github.com/AntonPashechko/yametrix/internal/storage/memstorage"
 )
 
 const (
@@ -32,7 +33,7 @@ func randFloats() float64 {
 }
 
 type updateMetricsWorker struct {
-	storage storage.MetricsStorage
+	storage *memstorage.Storage
 }
 
 func (m *updateMetricsWorker) Work() error {
@@ -52,15 +53,15 @@ func (m *updateMetricsWorker) Work() error {
 	}
 
 	for _, gaugeName := range RuntimeGaugesName {
-		m.storage.SetGauge(models.NewGaugeMetric(gaugeName, fields[gaugeName].(float64)))
+		m.storage.SetGauge(context.TODO(), models.NewGaugeMetric(gaugeName, fields[gaugeName].(float64)))
 	}
 
-	m.storage.AddCounter(models.NewCounterMetric(pollCount, 1))
-	m.storage.SetGauge(models.NewGaugeMetric(randomValue, randFloats()))
+	m.storage.AddCounter(context.TODO(), models.NewCounterMetric(pollCount, 1))
+	m.storage.SetGauge(context.TODO(), models.NewGaugeMetric(randomValue, randFloats()))
 
 	return nil
 }
 
-func NewUpdateMetricsWorker(storage storage.MetricsStorage) scheduler.RecurringWorker {
+func NewUpdateMetricsWorker(storage *memstorage.Storage) scheduler.RecurringWorker {
 	return &updateMetricsWorker{storage: storage}
 }

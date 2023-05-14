@@ -1,46 +1,47 @@
 package memstorage
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"sync"
 
 	"github.com/AntonPashechko/yametrix/internal/models"
-	"github.com/AntonPashechko/yametrix/internal/storage"
 	"github.com/AntonPashechko/yametrix/pkg/utils"
 )
 
-type MemStorage struct {
-	sync.Mutex
+var mux sync.Mutex
 
+type Storage struct {
 	//ЗАГЛАВНЫЕ ЧТО БЫ СРАБОТАЛ json.Marshal
-	Gauge   map[string]models.MetricsDTO
-	Counter map[string]models.MetricsDTO
+	Gauge   map[string]models.MetricDTO
+	Counter map[string]models.MetricDTO
 }
 
-func (m *MemStorage) clearCounter() {
-	/*m.Counter = make(map[string]int64)*/
+func (m *Storage) clearCounter() {
+	m.Counter = make(map[string]models.MetricDTO)
 }
 
-func NewMemStorage() storage.MetricsStorage {
+func NewStorage() *Storage {
 
-	ms := &MemStorage{}
-	ms.Gauge = make(map[string]models.MetricsDTO)
-	ms.Counter = make(map[string]models.MetricsDTO)
+	ms := &Storage{}
+	ms.Gauge = make(map[string]models.MetricDTO)
+	ms.Counter = make(map[string]models.MetricDTO)
 
 	return ms
 }
 
-func (m *MemStorage) SetGauge(metric models.MetricsDTO) {
-	m.Lock()
-	defer m.Unlock()
+func (m *Storage) SetGauge(ctx context.Context, metric models.MetricDTO) error {
+	mux.Lock()
+	defer mux.Unlock()
 
 	m.Gauge[metric.ID] = metric
+	return nil
 }
 
-func (m *MemStorage) AddCounter(metric models.MetricsDTO) models.MetricsDTO {
-	m.Lock()
-	defer m.Unlock()
+func (m *Storage) AddCounter(ctx context.Context, metric models.MetricDTO) (*models.MetricDTO, error) {
+	mux.Lock()
+	defer mux.Unlock()
 
 	_, ok := m.Counter[metric.ID]
 	if ok {
@@ -49,28 +50,36 @@ func (m *MemStorage) AddCounter(metric models.MetricsDTO) models.MetricsDTO {
 		m.Counter[metric.ID] = metric
 	}
 
-	return m.Counter[metric.ID]
+	val := m.Counter[metric.ID]
+
+	return &val, nil
 }
 
-func (m *MemStorage) GetGauge(key string) (models.MetricsDTO, bool) {
-	m.Lock()
-	defer m.Unlock()
+func (m *Storage) GetGauge(ctx context.Context, key string) (*models.MetricDTO, error) {
+	mux.Lock()
+	defer mux.Unlock()
 
 	val, ok := m.Gauge[key]
-	return val, ok
+	if !ok {
+		return nil, fmt.Errorf("gauge mertic %s is not exist", key)
+	}
+	return &val, nil
 }
 
-func (m *MemStorage) GetCounter(key string) (models.MetricsDTO, bool) {
-	m.Lock()
-	defer m.Unlock()
+func (m *Storage) GetCounter(ctx context.Context, key string) (*models.MetricDTO, error) {
+	mux.Lock()
+	defer mux.Unlock()
 
 	val, ok := m.Counter[key]
-	return val, ok
+	if !ok {
+		return nil, fmt.Errorf("counter mertic %s is not exist", key)
+	}
+	return &val, nil
 }
 
-func (m *MemStorage) GetMetricsList() []string {
-	m.Lock()
-	defer m.Unlock()
+func (m *Storage) GetMetricsList(ctx context.Context) []string {
+	mux.Lock()
+	defer mux.Unlock()
 
 	list := make([]string, 0, len(m.Counter)+len(m.Gauge))
 
@@ -86,11 +95,11 @@ func (m *MemStorage) GetMetricsList() []string {
 	return list
 }
 
-func (m *MemStorage) GetAllMetrics() []models.MetricsDTO {
-	m.Lock()
-	defer m.Unlock()
+func (m *Storage) GetAllMetrics() []models.MetricDTO {
+	mux.Lock()
+	defer mux.Unlock()
 
-	metrics := make([]models.MetricsDTO, 0)
+	metrics := make([]models.MetricDTO, 0)
 
 	for _, metric := range m.Gauge {
 		metrics = append(metrics, metric)
@@ -100,14 +109,14 @@ func (m *MemStorage) GetAllMetrics() []models.MetricsDTO {
 		metrics = append(metrics, metric)
 	}
 
-	//defer m.clearCounter()
+	defer m.clearCounter()
 
 	return metrics
 }
 
-func (m *MemStorage) Marshal() ([]byte, error) {
-	m.Lock()
-	defer m.Unlock()
+func (m *Storage) Marshal() ([]byte, error) {
+	mux.Lock()
+	defer mux.Unlock()
 
 	data, err := json.Marshal(&m)
 	if err != nil {
@@ -117,9 +126,9 @@ func (m *MemStorage) Marshal() ([]byte, error) {
 	return data, nil
 }
 
-func (m *MemStorage) Restore(data []byte) error {
-	m.Lock()
-	defer m.Unlock()
+func (m *Storage) Restore(data []byte) error {
+	mux.Lock()
+	defer mux.Unlock()
 
 	if err := json.Unmarshal(data, m); err != nil {
 		return fmt.Errorf("cannot unmarshal metrics: %w", err)
@@ -127,3 +136,9 @@ func (m *MemStorage) Restore(data []byte) error {
 
 	return nil
 }
+
+func (m *Storage) PingStorage(context.Context) error {
+	return nil
+}
+
+func (m *Storage) Close() {}

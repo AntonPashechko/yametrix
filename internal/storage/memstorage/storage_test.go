@@ -1,13 +1,14 @@
 package memstorage
 
 import (
+	"context"
 	"testing"
 
 	"github.com/AntonPashechko/yametrix/internal/models"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewMemStorage(t *testing.T) {
+func TestNewStorage(t *testing.T) {
 	tests := []struct {
 		name string
 	}{
@@ -15,7 +16,7 @@ func TestNewMemStorage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			storage := NewMemStorage()
+			storage := NewStorage()
 			assert.NotEmpty(t, storage)
 		})
 	}
@@ -23,7 +24,7 @@ func TestNewMemStorage(t *testing.T) {
 
 /*func TestMemStorage_GetGauge(t *testing.T) {
 
-	storage := NewMemStorage()
+	storage := NewStorage()
 	storage.SetGauge(models.NewGaugeMetric("MyGauge", 9.99))
 
 	tests := []struct {
@@ -46,7 +47,7 @@ func TestNewMemStorage(t *testing.T) {
 
 /*func TestMemStorage_GetCounter(t *testing.T) {
 
-	storage := NewMemStorage()
+	storage := NewStorage()
 	storage.AddCounter(models.NewCounterMetric("MyCounter", 10))
 
 	tests := []struct {
@@ -103,15 +104,15 @@ func TestMemStorage_GetMetricsList(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			storage := NewMemStorage()
+			storage := NewStorage()
 			for k, g := range tt.start.gauge {
-				storage.SetGauge(models.NewGaugeMetric(k, g))
+				storage.SetGauge(context.TODO(), models.NewGaugeMetric(k, g))
 			}
 			for k, c := range tt.start.counter {
-				storage.AddCounter(models.NewCounterMetric(k, c))
+				storage.AddCounter(context.TODO(), models.NewCounterMetric(k, c))
 			}
 
-			list := storage.GetMetricsList()
+			list := storage.GetMetricsList(context.TODO())
 
 			if tt.isWant {
 				if assert.NotEmpty(t, list) {
@@ -133,8 +134,8 @@ func TestMemStorage_GetMetricsList(t *testing.T) {
 		{
 			"SimpleMarshal",
 			&MemStorage{
-				Gauge: map[string]models.MetricsDTO{
-					"MyGauge": models.MetricsDTO{
+				Gauge: map[string]models.MetricDTO{
+					"MyGauge": models.MetricDTO{
 						"MyGauge",
 						"gauge",
 						nil,

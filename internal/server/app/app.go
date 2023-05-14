@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -15,7 +14,9 @@ import (
 	"github.com/AntonPashechko/yametrix/internal/server/config"
 	"github.com/AntonPashechko/yametrix/internal/server/handlers"
 	"github.com/AntonPashechko/yametrix/internal/server/restorer"
+	"github.com/AntonPashechko/yametrix/internal/storage"
 	"github.com/AntonPashechko/yametrix/internal/storage/memstorage"
+	"github.com/AntonPashechko/yametrix/internal/storage/sqlstorage"
 	"github.com/go-chi/chi/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
@@ -26,22 +27,28 @@ const (
 
 type App struct {
 	server     *http.Server
-	db         *sql.DB
+	storage    storage.MetricsStorage //Нужно как то закрыть базу при shutsown? TODO
 	notifyStop context.CancelFunc
 }
 
-func Create(cfg *config.Config) *App {
+func Create(cfg *config.Config) (*App, error) {
 
-	//Хранилище метрик
-	storage := memstorage.NewMemStorage()
+	var storage storage.MetricsStorage
+	if cfg.DataBaseDNS != "" {
+		var err error
+		storage, err = sqlstorage.NewStorage(cfg.DataBaseDNS)
+		if err != nil {
+			return nil, fmt.Errorf("cannot create db store: %w", err)
+		}
 
-	db, err := sql.Open("pgx", cfg.DataBaseDNS)
-	if err != nil {
-		log.Fatalf("cannot create connection db: %s\n", err)
+	} else {
+		//Хранилище метрик в памяти
+		memStorage := memstorage.NewStorage()
+		//Сторер
+		restorer.Initialize(memStorage, restorer.FileRestorer, cfg)
+
+		storage = memStorage
 	}
-
-	//Сторер
-	restorer.Initialize(storage, restorer.FileRestorer, cfg)
 
 	//Наш роутер, регистрируем хэндлеры
 	router := chi.NewRouter()
@@ -50,18 +57,16 @@ func Create(cfg *config.Config) *App {
 	//Подключаем middleware декомпрессии
 	router.Use(compress.Middleware)
 
-	metricsHandler := handlers.NewMetricsHandler(storage, db)
+	metricsHandler := handlers.NewMetricsHandler(storage)
 	metricsHandler.Register(router)
 
-	app := &App{
+	return &App{
 		server: &http.Server{
 			Addr:    cfg.Endpoint,
 			Handler: router,
 		},
-		db: db,
-	}
-
-	return app
+		storage: storage,
+	}, nil
 }
 
 func (m *App) Run() {
@@ -78,7 +83,7 @@ func (m *App) ServerDone() <-chan struct{} {
 
 func (m *App) Shutdown() error {
 	defer m.notifyStop()
-	defer m.db.Close()
+	defer m.storage.Close()
 	defer restorer.Shutdown()
 
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTime)

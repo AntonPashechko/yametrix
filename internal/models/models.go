@@ -1,19 +1,35 @@
 package models
 
+import (
+	"encoding/json"
+	"fmt"
+	"io"
+)
+
 const (
 	GaugeType   = "gauge"
 	CounterType = "counter"
 )
 
-type MetricsDTO struct {
+type MetricDTO struct {
 	ID    string   `json:"id"`              // имя метрики
 	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
 	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
 	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
 }
 
-func NewGaugeMetric(id string, value float64) MetricsDTO {
-	mertics := MetricsDTO{
+func NewMetricFromJSON(r io.Reader) (MetricDTO, error) {
+	var metric MetricDTO
+
+	if err := json.NewDecoder(r).Decode(&metric); err != nil {
+		return metric, fmt.Errorf("cannot decode metric from json: %s", err)
+	}
+
+	return metric, nil
+}
+
+func NewGaugeMetric(id string, value float64) MetricDTO {
+	mertics := MetricDTO{
 		ID:    id,
 		MType: GaugeType,
 	}
@@ -23,8 +39,8 @@ func NewGaugeMetric(id string, value float64) MetricsDTO {
 	return mertics
 }
 
-func NewCounterMetric(id string, delta int64) MetricsDTO {
-	mertics := MetricsDTO{
+func NewCounterMetric(id string, delta int64) MetricDTO {
+	mertics := MetricDTO{
 		ID:    id,
 		MType: CounterType,
 	}
@@ -34,7 +50,7 @@ func NewCounterMetric(id string, delta int64) MetricsDTO {
 	return mertics
 }
 
-func (m *MetricsDTO) SetValue(value float64) {
+func (m *MetricDTO) SetValue(value float64) {
 	if m.Value == nil {
 		m.Value = new(float64)
 	}
@@ -42,7 +58,7 @@ func (m *MetricsDTO) SetValue(value float64) {
 	*m.Value = value
 }
 
-func (m *MetricsDTO) SetDelta(delta int64) {
+func (m *MetricDTO) SetDelta(delta int64) {
 	if m.Delta == nil {
 		m.Delta = new(int64)
 	}

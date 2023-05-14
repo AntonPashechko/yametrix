@@ -24,7 +24,7 @@ func main() {
 		log.Fatalf("cannot load config: %s\n", err)
 	}
 
-	storage := memstorage.NewMemStorage()
+	storage := memstorage.NewStorage()
 
 	/*Запуск шедулера обновления метрик*/
 	updateWorker := updater.NewUpdateMetricsWorker(storage)

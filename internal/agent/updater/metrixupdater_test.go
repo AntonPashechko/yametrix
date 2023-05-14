@@ -20,7 +20,7 @@ func TestNewUpdateMetricsWorker(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			upd := NewUpdateMetricsWorker(memstorage.NewMemStorage())
+			upd := NewUpdateMetricsWorker(memstorage.NewStorage())
 			assert.NotEmpty(t, upd)
 		})
 	}
@@ -28,7 +28,7 @@ func TestNewUpdateMetricsWorker(t *testing.T) {
 
 func Test_updateMetricsWorker_Work(t *testing.T) {
 
-	storage := memstorage.NewMemStorage()
+	storage := memstorage.NewStorage()
 	updateWorker := NewUpdateMetricsWorker(storage)
 
 	tests := []struct {

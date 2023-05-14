@@ -71,7 +71,7 @@ func LoadServerConfig() (*Config, error) {
 	flag.StringVar(&opt.storePath, "а", "/tmp/metrics-db.json", "store metrics path")
 
 	flag.StringVar(&opt.restore, "r", "true", "is restore")
-	flag.StringVar(&opt.dbDNS, "d", "host=localhost user=postgres password=postgres dbname=postgres sslmode=disable", "db dns")
+	flag.StringVar(&opt.dbDNS, "d", "", "db dns")
 
 	flag.Parse()
 

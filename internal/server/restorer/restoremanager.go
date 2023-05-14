@@ -6,7 +6,7 @@ import (
 	"github.com/AntonPashechko/yametrix/internal/logger"
 	"github.com/AntonPashechko/yametrix/internal/scheduler"
 	config "github.com/AntonPashechko/yametrix/internal/server/config"
-	"github.com/AntonPashechko/yametrix/internal/storage"
+	"github.com/AntonPashechko/yametrix/internal/storage/memstorage"
 )
 
 type RestorerType int
@@ -39,7 +39,7 @@ func (m *Manager) shutdown() {
 var instance *Manager
 var once sync.Once
 
-func Initialize(storage storage.MetricsStorage, mType RestorerType, cfg *config.Config) {
+func Initialize(storage *memstorage.Storage, mType RestorerType, cfg *config.Config) {
 	//Ресторер используем как синглтон, потому тут я применяю sync.Once, считаю эту конструкцию наиболее подходящей для задачи инициализации синглтона
 	once.Do(func() {
 		var restorer MetricsRestorer
