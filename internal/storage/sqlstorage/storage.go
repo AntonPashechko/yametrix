@@ -8,6 +8,7 @@ import (
 
 	"github.com/AntonPashechko/yametrix/internal/models"
 	"github.com/AntonPashechko/yametrix/internal/storage"
+	"github.com/AntonPashechko/yametrix/pkg/utils"
 )
 
 var _ storage.MetricsStorage = &Storage{}
@@ -135,8 +136,39 @@ func (m *Storage) GetGauge(ctx context.Context, key string) (*models.MetricDTO, 
 }
 
 // GetMetricsList implements storage.MetricsStorage
-func (m *Storage) GetMetricsList(ctx context.Context) []string {
-	panic("unimplemented")
+func (m *Storage) GetMetricsList(ctx context.Context) ([]string, error) {
+
+	list := make([]string, 0)
+
+	var metric models.MetricDTO
+	rows, err := m.conn.QueryContext(ctx, "SELECT * FROM metrics")
+	if err != nil {
+		return nil, fmt.Errorf("cannot query contex: %w", err)
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		err = rows.Scan(&metric.ID, &metric.MType, &metric.Delta, &metric.Value)
+		if err != nil {
+			return nil, fmt.Errorf("cannot scan row: %w", err)
+		}
+
+		if metric.MType == models.GaugeType {
+			strValue := utils.Float64ToStr(*metric.Value)
+			list = append(list, fmt.Sprintf("%s = %s", metric.ID, strValue))
+		} else if metric.MType == models.CounterType {
+			list = append(list, fmt.Sprintf("%s = %d", metric.ID, *metric.Delta))
+		}
+	}
+
+	// проверяем на ошибки
+	err = rows.Err()
+	if err != nil {
+		return nil, fmt.Errorf("query rows: %w", err)
+	}
+
+	return list, nil
 }
 
 func (m *Storage) PingStorage(ctx context.Context) error {

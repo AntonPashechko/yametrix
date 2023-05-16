@@ -55,7 +55,11 @@ func (m *MetricsHandler) errorRespond(w http.ResponseWriter, code int, err error
 }
 
 func (m *MetricsHandler) getAll(w http.ResponseWriter, r *http.Request) {
-	list := m.storage.GetMetricsList(r.Context())
+	list, err := m.storage.GetMetricsList(r.Context())
+	if err != nil {
+		m.errorRespond(w, http.StatusInternalServerError, fmt.Errorf("cannot set metrics list: %s", err))
+		return
+	}
 
 	w.Header().Set("Content-Type", "text/html")
 	io.WriteString(w, strings.Join(list, ", "))
@@ -80,8 +84,7 @@ func (m *MetricsHandler) get(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	logger.Error("cannot get metric: %s", err)
-	w.WriteHeader(http.StatusNotFound)
+	m.errorRespond(w, http.StatusNotFound, fmt.Errorf("cannot get metric: %s", err))
 }
 
 func (m *MetricsHandler) update(w http.ResponseWriter, r *http.Request) {
@@ -117,8 +120,7 @@ func (m *MetricsHandler) update(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	logger.Error("NotFound: unknown metric type %s", mType)
-	w.WriteHeader(http.StatusNotImplemented)
+	m.errorRespond(w, http.StatusNotImplemented, fmt.Errorf("unknown metric type %s", mType))
 }
 
 func (m *MetricsHandler) getJSON(w http.ResponseWriter, r *http.Request) {

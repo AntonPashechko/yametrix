@@ -77,7 +77,7 @@ func (m *Storage) GetCounter(ctx context.Context, key string) (*models.MetricDTO
 	return &val, nil
 }
 
-func (m *Storage) GetMetricsList(ctx context.Context) []string {
+func (m *Storage) GetMetricsList(ctx context.Context) ([]string, error) {
 	mux.Lock()
 	defer mux.Unlock()
 
@@ -92,7 +92,7 @@ func (m *Storage) GetMetricsList(ctx context.Context) []string {
 		list = append(list, fmt.Sprintf("%s = %d", name, *metric.Delta))
 	}
 
-	return list
+	return list, nil
 }
 
 func (m *Storage) GetAllMetrics() []models.MetricDTO {

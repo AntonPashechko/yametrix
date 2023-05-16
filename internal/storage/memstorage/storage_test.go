@@ -112,7 +112,8 @@ func TestMemStorage_GetMetricsList(t *testing.T) {
 				storage.AddCounter(context.TODO(), models.NewCounterMetric(k, c))
 			}
 
-			list := storage.GetMetricsList(context.TODO())
+			list, err := storage.GetMetricsList(context.TODO())
+			assert.NoError(t, err)
 
 			if tt.isWant {
 				if assert.NotEmpty(t, list) {

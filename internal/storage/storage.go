@@ -12,7 +12,7 @@ type MetricsStorage interface {
 
 	GetGauge(context.Context, string) (*models.MetricDTO, error)
 	GetCounter(context.Context, string) (*models.MetricDTO, error)
-	GetMetricsList(context.Context) []string
+	GetMetricsList(context.Context) ([]string, error)
 
 	PingStorage(context.Context) error
 	Close()
