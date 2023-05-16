@@ -11,7 +11,7 @@ import (
 func main() {
 	//Инициализируем синглтон логера
 	if err := logger.Initialize("info"); err != nil {
-		log.Fatalf("cannot load config: %s\n", err)
+		log.Fatalf("cannot initialize logger: %s\n", err)
 	}
 
 	cfg, err := config.LoadServerConfig()

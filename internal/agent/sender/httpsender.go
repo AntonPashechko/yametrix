@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	update = "update/"
+	updates = "updates/"
 )
 
 type httpSendWorker struct {
@@ -53,9 +53,19 @@ func (m *httpSendWorker) postMetric(url string, buf []byte) error {
 func (m *httpSendWorker) Work() error {
 	metrics := m.storage.GetAllMetrics()
 
-	url := strings.Join([]string{m.endpoint, update}, "/")
+	url := strings.Join([]string{m.endpoint, updates}, "/")
 
-	for _, metric := range metrics {
+	buf := new(bytes.Buffer)
+	if err := json.NewEncoder(buf).Encode(metrics); err != nil {
+		return fmt.Errorf("error encoding metrics %w", err)
+	}
+
+	err := m.postMetric(url, buf.Bytes())
+	if err != nil {
+		return fmt.Errorf("cannot send metrics batch: %w", err)
+	}
+
+	/*for _, metric := range metrics {
 		buf := new(bytes.Buffer)
 
 		if err := json.NewEncoder(buf).Encode(metric); err != nil {
@@ -64,9 +74,9 @@ func (m *httpSendWorker) Work() error {
 
 		err := m.postMetric(url, buf.Bytes())
 		if err != nil {
-			return fmt.Errorf("cannot send gauge metric: %w", err)
+			return fmt.Errorf("cannot send metric: %w", err)
 		}
-	}
+	}*/
 
 	return nil
 }
