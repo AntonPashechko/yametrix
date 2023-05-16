@@ -15,11 +15,6 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-const (
-	Gauge   string = "gauge"
-	Counter string = "counter"
-)
-
 type MetricsHandler struct {
 	storage storage.MetricsStorage
 }
@@ -77,12 +72,12 @@ func (m *MetricsHandler) get(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	switch mType {
-	case Gauge:
+	case models.GaugeType:
 		if metric, err := m.storage.GetGauge(r.Context(), name); err == nil {
 			w.Write([]byte(utils.Float64ToStr(*metric.Value)))
 			return
 		}
-	case Counter:
+	case models.CounterType:
 		if metric, err := m.storage.GetCounter(r.Context(), name); err == nil {
 			w.Write([]byte(utils.Int64ToStr(*metric.Delta)))
 			return
@@ -97,7 +92,7 @@ func (m *MetricsHandler) update(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
 	switch mType {
-	case Gauge:
+	case models.GaugeType:
 		if value, err := utils.StrToFloat64(chi.URLParam(r, "value")); err != nil {
 			m.errorRespond(w, http.StatusBadRequest, fmt.Errorf("bad gauge value: %s", chi.URLParam(r, "value")))
 			return
@@ -110,7 +105,7 @@ func (m *MetricsHandler) update(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
-	case Counter:
+	case models.CounterType:
 		if value, err := utils.StrToInt64(chi.URLParam(r, "value")); err != nil {
 			m.errorRespond(w, http.StatusBadRequest, fmt.Errorf("bad counter value: %s", chi.URLParam(r, "value")))
 			return
@@ -139,12 +134,12 @@ func (m *MetricsHandler) getJSON(w http.ResponseWriter, r *http.Request) {
 	var res *models.MetricDTO
 
 	switch metric.MType {
-	case Gauge:
+	case models.GaugeType:
 		if res, err = m.storage.GetGauge(r.Context(), metric.ID); err != nil {
 			m.errorRespond(w, http.StatusNotFound, fmt.Errorf("cannot get metric: %s", err))
 			return
 		}
-	case Counter:
+	case models.CounterType:
 		if res, err = m.storage.GetCounter(r.Context(), metric.ID); err != nil {
 			m.errorRespond(w, http.StatusNotFound, fmt.Errorf("cannot get metric: %s", err))
 			return
@@ -169,7 +164,7 @@ func (m *MetricsHandler) updateJSON(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch metric.MType {
-	case Gauge:
+	case models.GaugeType:
 		if metric.Value == nil {
 			m.errorRespond(w, http.StatusBadRequest, fmt.Errorf("gauge value is nil"))
 			return
@@ -185,7 +180,7 @@ func (m *MetricsHandler) updateJSON(w http.ResponseWriter, r *http.Request) {
 			m.errorRespond(w, http.StatusInternalServerError, fmt.Errorf("error encoding response: %s", err))
 		}
 
-	case Counter:
+	case models.CounterType:
 		if metric.Delta == nil {
 			m.errorRespond(w, http.StatusBadRequest, fmt.Errorf("counter delta is nil"))
 			return
@@ -209,7 +204,7 @@ func (m *MetricsHandler) updateJSON(w http.ResponseWriter, r *http.Request) {
 func (m *MetricsHandler) updateBatchJSON(w http.ResponseWriter, r *http.Request) {
 	metrics, err := models.NewMetricsFromJSON(r.Body)
 	if err != nil {
-		m.errorRespond(w, http.StatusBadRequest, fmt.Errorf("cannot decode metrics: %s", err))
+		m.errorRespond(w, http.StatusBadRequest, fmt.Errorf("cannot decode metrics batch: %s", err))
 		return
 	}
 

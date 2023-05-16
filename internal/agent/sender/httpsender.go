@@ -13,9 +13,6 @@ import (
 )
 
 const (
-	GaugeType   = "gauge"
-	CounterType = "counter"
-
 	update = "update/"
 )
 

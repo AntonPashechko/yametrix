@@ -55,7 +55,16 @@ func (m *Storage) AddCounter(ctx context.Context, metric models.MetricDTO) (*mod
 	return &val, nil
 }
 
-func (m *Storage) AcceptMetricsBatch(context.Context, []models.MetricDTO) error {
+func (m *Storage) AcceptMetricsBatch(ctx context.Context, metrics []models.MetricDTO) error {
+
+	for _, metric := range metrics {
+		if metric.MType == models.GaugeType {
+			m.SetGauge(ctx, metric)
+		} else if metric.MType == models.CounterType {
+			m.AddCounter(ctx, metric)
+		}
+	}
+
 	return nil
 }
 
