@@ -55,6 +55,10 @@ func (m *Storage) AddCounter(ctx context.Context, metric models.MetricDTO) (*mod
 	return &val, nil
 }
 
+func (m *Storage) AcceptMetricsBatch(context.Context, []models.MetricDTO) error {
+	return nil
+}
+
 func (m *Storage) GetGauge(ctx context.Context, key string) (*models.MetricDTO, error) {
 	mux.Lock()
 	defer mux.Unlock()

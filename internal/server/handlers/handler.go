@@ -43,6 +43,11 @@ func (m *MetricsHandler) Register(router *chi.Mux) {
 		router.Post("/{type}/{name}/{value}", m.update)
 	})
 
+	router.Route("/updates", func(router chi.Router) {
+		router.Use(restorer.Middleware)
+		router.Post("/", m.updateBatchJSON)
+	})
+
 	router.Route("/value", func(router chi.Router) {
 		router.Post("/", m.getJSON)
 		router.Get("/{type}/{name}", m.get)
@@ -125,28 +130,27 @@ func (m *MetricsHandler) update(w http.ResponseWriter, r *http.Request) {
 
 func (m *MetricsHandler) getJSON(w http.ResponseWriter, r *http.Request) {
 
-	var req models.MetricDTO
-	var res *models.MetricDTO
-	var err error
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		m.errorRespond(w, http.StatusInternalServerError, fmt.Errorf("cannot decode request JSON body: %s", err))
+	metric, err := models.NewMetricFromJSON(r.Body)
+	if err != nil {
+		m.errorRespond(w, http.StatusBadRequest, fmt.Errorf("cannot decode metric: %s", err))
 		return
 	}
 
-	switch req.MType {
+	var res *models.MetricDTO
+
+	switch metric.MType {
 	case Gauge:
-		if res, err = m.storage.GetGauge(r.Context(), req.ID); err != nil {
+		if res, err = m.storage.GetGauge(r.Context(), metric.ID); err != nil {
 			m.errorRespond(w, http.StatusNotFound, fmt.Errorf("cannot get metric: %s", err))
 			return
 		}
 	case Counter:
-		if res, err = m.storage.GetCounter(r.Context(), req.ID); err != nil {
+		if res, err = m.storage.GetCounter(r.Context(), metric.ID); err != nil {
 			m.errorRespond(w, http.StatusNotFound, fmt.Errorf("cannot get metric: %s", err))
 			return
 		}
 	default:
-		m.errorRespond(w, http.StatusNotFound, fmt.Errorf("unknown metric type: %s", req.MType))
+		m.errorRespond(w, http.StatusNotFound, fmt.Errorf("unknown metric type: %s", metric.MType))
 		return
 	}
 
@@ -199,6 +203,19 @@ func (m *MetricsHandler) updateJSON(w http.ResponseWriter, r *http.Request) {
 
 	default:
 		m.errorRespond(w, http.StatusNotImplemented, fmt.Errorf("unknown metric type %s", metric.MType))
+	}
+}
+
+func (m *MetricsHandler) updateBatchJSON(w http.ResponseWriter, r *http.Request) {
+	metrics, err := models.NewMetricsFromJSON(r.Body)
+	if err != nil {
+		m.errorRespond(w, http.StatusBadRequest, fmt.Errorf("cannot decode metrics: %s", err))
+		return
+	}
+
+	if err := m.storage.AcceptMetricsBatch(r.Context(), metrics); err != nil {
+		m.errorRespond(w, http.StatusInternalServerError, fmt.Errorf("cannot accept metrics batch: %s", err))
+		return
 	}
 }
 

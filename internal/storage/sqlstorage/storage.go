@@ -126,6 +126,62 @@ func (m *Storage) SetGauge(ctx context.Context, metric models.MetricDTO) error {
 	return nil
 }
 
+func (m *Storage) AcceptMetricsBatch(ctx context.Context, metrics []models.MetricDTO) error {
+
+	// начинаем транзакцию
+	tx, err := m.conn.Begin()
+	if err != nil {
+		return fmt.Errorf("cannot start a transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	insertStmt, err := tx.PrepareContext(ctx, "INSERT INTO metrics (id, type, delta, value) VALUES($1,$2,$3,$4)")
+	if err != nil {
+		return fmt.Errorf("cannot create a prepared statement for insert metric: %w", err)
+	}
+	defer insertStmt.Close()
+
+	updateGaugeStmt, err := tx.PrepareContext(ctx, "UPDATE metrics SET value = $1 WHERE id = $2")
+	if err != nil {
+		return fmt.Errorf("cannot create a prepared statement for update gauge metric: %w", err)
+	}
+	defer updateGaugeStmt.Close()
+
+	addCounterStmt, err := tx.PrepareContext(ctx, "UPDATE metrics SET delta = delta + $1 WHERE id = $2")
+	if err != nil {
+		return fmt.Errorf("cannot create a prepared statement for add counter metric: %w", err)
+	}
+	defer addCounterStmt.Close()
+
+	for _, metric := range metrics {
+		if m.isMerticExist(ctx, metric) {
+			if metric.MType == models.GaugeType {
+				_, err := updateGaugeStmt.ExecContext(ctx, metric.Value, metric.ID)
+				if err != nil {
+					return fmt.Errorf("cannot exec update gauge statement: %w", err)
+				}
+			} else {
+				_, err := addCounterStmt.ExecContext(ctx, metric.Delta, metric.ID)
+				if err != nil {
+					return fmt.Errorf("cannot exec add counter statement: %w", err)
+				}
+			}
+		} else {
+			_, err := insertStmt.ExecContext(ctx, metric.ID, metric.MType, metric.Delta, metric.Value)
+			if err != nil {
+				return fmt.Errorf("cannot exec insert statement: %w", err)
+			}
+		}
+	}
+	// завершаем транзакцию
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("cannot commit the transaction: %w", err)
+	}
+
+	return nil
+}
+
 func (m *Storage) GetCounter(ctx context.Context, key string) (*models.MetricDTO, error) {
 	return m.getMetricByID(ctx, key)
 }

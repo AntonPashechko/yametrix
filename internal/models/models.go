@@ -28,6 +28,16 @@ func NewMetricFromJSON(r io.Reader) (MetricDTO, error) {
 	return metric, nil
 }
 
+func NewMetricsFromJSON(r io.Reader) ([]MetricDTO, error) {
+	var metrics []MetricDTO
+
+	if err := json.NewDecoder(r).Decode(&metrics); err != nil {
+		return metrics, fmt.Errorf("cannot decode metric from json: %s", err)
+	}
+
+	return metrics, nil
+}
+
 func NewGaugeMetric(id string, value float64) MetricDTO {
 	mertics := MetricDTO{
 		ID:    id,
