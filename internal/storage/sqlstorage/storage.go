@@ -66,20 +66,13 @@ func (m *Storage) isMerticExist(ctx context.Context, metric models.MetricDTO) bo
 }
 
 // GetGauge implements storage.MetricsStorage
-func (m *Storage) getMetricById(ctx context.Context, id string) (*models.MetricDTO, error) {
+func (m *Storage) getMetricByID(ctx context.Context, id string) (*models.MetricDTO, error) {
 	// делаем запрос
-	row := m.conn.QueryRowContext(ctx, "SELECT * FROM metric WHERE id = $1", id)
+	row := m.conn.QueryRowContext(ctx, "SELECT * FROM metrics WHERE id = $1", id)
 	// готовим переменную для чтения результата
 
-	var (
-		mid   string
-		mtype string
-		delta int
-		value float64
-	)
-
 	var metric models.MetricDTO
-	err := row.Scan(&mid, &mtype, delta, value) // разбираем результат
+	err := row.Scan(&metric.ID, &metric.MType, &metric.Delta, &metric.Value) // разбираем результат
 	if err != nil {
 		return nil, fmt.Errorf("cannot scan row: %w", err)
 	}
@@ -106,7 +99,7 @@ func (m *Storage) AddCounter(ctx context.Context, metric models.MetricDTO) (*mod
 		}
 	}
 
-	return m.getMetricById(ctx, metric.ID)
+	return m.getMetricByID(ctx, metric.ID)
 }
 
 // SetGauge implements storage.MetricsStorage
@@ -133,12 +126,12 @@ func (m *Storage) SetGauge(ctx context.Context, metric models.MetricDTO) error {
 }
 
 func (m *Storage) GetCounter(ctx context.Context, key string) (*models.MetricDTO, error) {
-	return m.getMetricById(ctx, key)
+	return m.getMetricByID(ctx, key)
 }
 
 // GetGauge implements storage.MetricsStorage
 func (m *Storage) GetGauge(ctx context.Context, key string) (*models.MetricDTO, error) {
-	return m.getMetricById(ctx, key)
+	return m.getMetricByID(ctx, key)
 }
 
 // GetMetricsList implements storage.MetricsStorage

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -48,6 +49,11 @@ func (m *MetricsHandler) Register(router *chi.Mux) {
 	})
 }
 
+func (m *MetricsHandler) errorRespond(w http.ResponseWriter, code int, err error) {
+	logger.Error(err.Error())
+	w.WriteHeader(code)
+}
+
 func (m *MetricsHandler) getAll(w http.ResponseWriter, r *http.Request) {
 	list := m.storage.GetMetricsList(r.Context())
 
@@ -85,14 +91,12 @@ func (m *MetricsHandler) update(w http.ResponseWriter, r *http.Request) {
 	switch mType {
 	case Gauge:
 		if value, err := utils.StrToFloat64(chi.URLParam(r, "value")); err != nil {
-			logger.Error("BadRequest: bad gauge value %s", chi.URLParam(r, "value"))
-			w.WriteHeader(http.StatusBadRequest)
+			m.errorRespond(w, http.StatusBadRequest, fmt.Errorf("bad gauge value: %s", chi.URLParam(r, "value")))
 			return
 		} else {
 			err := m.storage.SetGauge(r.Context(), models.NewGaugeMetric(name, value))
 			if err != nil {
-				logger.Error("Cannot SetGauge: %s", err)
-				w.WriteHeader(http.StatusInternalServerError)
+				m.errorRespond(w, http.StatusInternalServerError, fmt.Errorf("cannot set gauge: %s", err))
 				return
 			}
 			w.WriteHeader(http.StatusOK)
@@ -100,14 +104,12 @@ func (m *MetricsHandler) update(w http.ResponseWriter, r *http.Request) {
 		}
 	case Counter:
 		if value, err := utils.StrToInt64(chi.URLParam(r, "value")); err != nil {
-			logger.Error("BadRequest: bad counter value %s", chi.URLParam(r, "value"))
-			w.WriteHeader(http.StatusBadRequest)
+			m.errorRespond(w, http.StatusBadRequest, fmt.Errorf("bad counter value: %s", chi.URLParam(r, "value")))
 			return
 		} else {
 			_, err := m.storage.AddCounter(r.Context(), models.NewCounterMetric(name, value))
 			if err != nil {
-				logger.Error("Cannot AddCounter: %s", err)
-				w.WriteHeader(http.StatusInternalServerError)
+				m.errorRespond(w, http.StatusInternalServerError, fmt.Errorf("cannot add counter: %s", err))
 				return
 			}
 			w.WriteHeader(http.StatusOK)
@@ -126,33 +128,29 @@ func (m *MetricsHandler) getJSON(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		logger.Error("cannot decode request JSON body: %s", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		m.errorRespond(w, http.StatusInternalServerError, fmt.Errorf("cannot decode request JSON body: %s", err))
 		return
 	}
 
 	switch req.MType {
 	case Gauge:
 		if res, err = m.storage.GetGauge(r.Context(), req.ID); err != nil {
-			logger.Error("cannot get metric: %s", err)
-			w.WriteHeader(http.StatusNotFound)
+			m.errorRespond(w, http.StatusNotFound, fmt.Errorf("cannot get metric: %s", err))
 			return
 		}
 	case Counter:
 		if res, err = m.storage.GetCounter(r.Context(), req.ID); err != nil {
-			logger.Error("cannot get metric: %s", err)
-			w.WriteHeader(http.StatusNotFound)
+			m.errorRespond(w, http.StatusNotFound, fmt.Errorf("cannot get metric: %s", err))
 			return
 		}
 	default:
-		logger.Error("NotFound: unknown metric type %s", req.MType)
-		w.WriteHeader(http.StatusNotFound)
+		m.errorRespond(w, http.StatusNotFound, fmt.Errorf("unknown metric type: %s", req.MType))
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(res); err != nil {
-		logger.Error("error encoding response: %s", err)
+		m.errorRespond(w, http.StatusInternalServerError, fmt.Errorf("error encoding response: %s", err))
 	}
 }
 
@@ -160,60 +158,51 @@ func (m *MetricsHandler) updateJSON(w http.ResponseWriter, r *http.Request) {
 
 	metric, err := models.NewMetricFromJSON(r.Body)
 	if err != nil {
-		logger.Error("cannot decode metric: %s", err)
-		w.WriteHeader(http.StatusBadRequest)
+		m.errorRespond(w, http.StatusBadRequest, fmt.Errorf("cannot decode metric: %s", err))
 		return
 	}
 
 	switch metric.MType {
 	case Gauge:
 		if metric.Value == nil {
-			logger.Error("BadRequest: gauge value is nil")
-			w.WriteHeader(http.StatusBadRequest)
+			m.errorRespond(w, http.StatusBadRequest, fmt.Errorf("gauge value is nil"))
 			return
 		}
 		err := m.storage.SetGauge(r.Context(), metric)
 		if err != nil {
-			logger.Error("Cannot SetGauge: %s", err)
-			w.WriteHeader(http.StatusInternalServerError)
+			m.errorRespond(w, http.StatusInternalServerError, fmt.Errorf("cannot set gauge: %s", err))
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(metric); err != nil {
-			logger.Error("error encoding response: %s", err)
+			m.errorRespond(w, http.StatusInternalServerError, fmt.Errorf("error encoding response: %s", err))
 		}
 
 	case Counter:
 		if metric.Delta == nil {
-			logger.Error("BadRequest: counter delta is nil")
-			w.WriteHeader(http.StatusBadRequest)
+			m.errorRespond(w, http.StatusBadRequest, fmt.Errorf("counter delta is nil"))
 			return
 		}
 		res, err := m.storage.AddCounter(r.Context(), metric)
 		if err != nil {
-			logger.Error("Cannot AddCounter: %s", err)
-			w.WriteHeader(http.StatusInternalServerError)
+			m.errorRespond(w, http.StatusInternalServerError, fmt.Errorf("cannot add counter: %s", err))
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(res); err != nil {
-			logger.Error("error encoding response: %s", err)
+			m.errorRespond(w, http.StatusInternalServerError, fmt.Errorf("error encoding response: %s", err))
 		}
 
 	default:
-		logger.Error("NotFound: unknown metric type %s", metric.MType)
-		w.WriteHeader(http.StatusNotImplemented)
-		return
+		m.errorRespond(w, http.StatusNotImplemented, fmt.Errorf("unknown metric type %s", metric.MType))
 	}
 }
 
 func (m *MetricsHandler) pingDB(w http.ResponseWriter, r *http.Request) {
 
 	if err := m.storage.PingStorage(r.Context()); err != nil {
-		logger.Error("cannot ping store %s", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		m.errorRespond(w, http.StatusInternalServerError, fmt.Errorf("cannot ping store: %s", err))
 	}
 }
