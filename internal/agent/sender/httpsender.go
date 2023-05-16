@@ -53,6 +53,11 @@ func (m *httpSendWorker) postMetric(url string, buf []byte) error {
 func (m *httpSendWorker) Work() error {
 	metrics := m.storage.GetAllMetrics()
 
+	//В ЗАДАНИИ СКАЗАНО отправлять пустые батчи не нужно; (12 инкремент)
+	if len(metrics) == 0 {
+		return fmt.Errorf("metrics is empty")
+	}
+
 	url := strings.Join([]string{m.endpoint, updates}, "/")
 
 	buf := new(bytes.Buffer)
@@ -64,19 +69,6 @@ func (m *httpSendWorker) Work() error {
 	if err != nil {
 		return fmt.Errorf("cannot send metrics batch: %w", err)
 	}
-
-	/*for _, metric := range metrics {
-		buf := new(bytes.Buffer)
-
-		if err := json.NewEncoder(buf).Encode(metric); err != nil {
-			return fmt.Errorf("error encoding metric %w", err)
-		}
-
-		err := m.postMetric(url, buf.Bytes())
-		if err != nil {
-			return fmt.Errorf("cannot send metric: %w", err)
-		}
-	}*/
 
 	return nil
 }

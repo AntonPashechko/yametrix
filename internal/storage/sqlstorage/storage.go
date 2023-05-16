@@ -154,7 +154,13 @@ func (m *Storage) AcceptMetricsBatch(ctx context.Context, metrics []models.Metri
 	defer addCounterStmt.Close()
 
 	for _, metric := range metrics {
-		if m.isMerticExist(ctx, metric) {
+		//В РАМКАХ ЗАПРОСА МОГУТ ПРИЙТИ МЕТРИКИ С ОДНИМ И ТЕМ ЖЕ ИМЕНЕМ (В ТЕСТАХ) - НУЖНО ПРОВЕРЯТЬ ЭТО В РАМКАХ ТРАНЗАКЦИИ
+		//НЕ МОГУ ИСПОЛЬЗОВАТЬ m.isMerticExist
+		row := tx.QueryRowContext(ctx, "SELECT id FROM metrics WHERE id = $1", metric.ID)
+		err := row.Scan(&metric.ID)
+		isExist := !(err != nil && err == sql.ErrNoRows)
+
+		if isExist {
 			if metric.MType == models.GaugeType {
 				_, err := updateGaugeStmt.ExecContext(ctx, metric.Value, metric.ID)
 				if err != nil {

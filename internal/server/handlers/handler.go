@@ -208,9 +208,6 @@ func (m *MetricsHandler) updateBatchJSON(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	data, _ := json.Marshal(metrics)
-	logger.Info(string(data))
-
 	if err := m.storage.AcceptMetricsBatch(r.Context(), metrics); err != nil {
 		m.errorRespond(w, http.StatusInternalServerError, fmt.Errorf("cannot accept metrics batch: %s", err))
 		return
