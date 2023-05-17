@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/AntonPashechko/yametrix/internal/logger"
 	"github.com/AntonPashechko/yametrix/internal/models"
 	"github.com/AntonPashechko/yametrix/internal/storage"
 	"github.com/AntonPashechko/yametrix/pkg/utils"
@@ -50,7 +51,7 @@ func (m *Storage) bootstrap(ctx context.Context) error {
         CREATE TABLE IF NOT EXISTS metrics (
             id varchar(128) PRIMARY KEY,
 			type varchar(128),
-			delta int,
+			delta bigint,
 			value double precision
         )
     `)
@@ -154,6 +155,7 @@ func (m *Storage) AcceptMetricsBatch(ctx context.Context, metrics []models.Metri
 	defer addCounterStmt.Close()
 
 	for _, metric := range metrics {
+		logger.Info("CURRENT METRIC IS %s-%s", metric.ID, metric.MType)
 		//В РАМКАХ ЗАПРОСА МОГУТ ПРИЙТИ МЕТРИКИ С ОДНИМ И ТЕМ ЖЕ ИМЕНЕМ (В ТЕСТАХ) - НУЖНО ПРОВЕРЯТЬ ЭТО В РАМКАХ ТРАНЗАКЦИИ
 		//НЕ МОГУ ИСПОЛЬЗОВАТЬ m.isMerticExist
 		row := tx.QueryRowContext(ctx, "SELECT id FROM metrics WHERE id = $1", metric.ID)
@@ -161,6 +163,8 @@ func (m *Storage) AcceptMetricsBatch(ctx context.Context, metrics []models.Metri
 		isExist := !(err != nil && err == sql.ErrNoRows)
 
 		if isExist {
+			logger.Info("METRIC IS EXIST")
+
 			if metric.MType == models.GaugeType {
 				_, err := updateGaugeStmt.ExecContext(ctx, metric.Value, metric.ID)
 				if err != nil {
@@ -173,6 +177,8 @@ func (m *Storage) AcceptMetricsBatch(ctx context.Context, metrics []models.Metri
 				}
 			}
 		} else {
+			logger.Info("METRIC NOT EXIST")
+
 			_, err := insertStmt.ExecContext(ctx, metric.ID, metric.MType, metric.Delta, metric.Value)
 			if err != nil {
 				return fmt.Errorf("cannot exec insert statement: %w", err)
