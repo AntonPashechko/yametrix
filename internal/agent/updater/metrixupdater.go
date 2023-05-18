@@ -10,11 +10,17 @@ import (
 	"github.com/AntonPashechko/yametrix/internal/models"
 	"github.com/AntonPashechko/yametrix/internal/scheduler"
 	"github.com/AntonPashechko/yametrix/internal/storage/memstorage"
+	"github.com/pbnjay/memory"
+	"github.com/shirou/gopsutil/cpu"
 )
 
 const (
 	pollCount   = "PollCount"
 	randomValue = "RandomValue"
+
+	totalMemory    = "TotalMemory"
+	freeMemory     = "FreeMemory"
+	cpuUtilization = "CPUutilization1"
 
 	floatMin = 1.10
 	floatMax = 101.98
@@ -40,6 +46,8 @@ func (m *updateMetricsWorker) Work() error {
 	mem := new(runtime.MemStats)
 	runtime.ReadMemStats(mem)
 
+	memory.TotalMemory()
+
 	/*Делаем json, что бы было убоднее пройтись по нужным метрикам*/
 	jMetrics, err := json.Marshal(mem)
 	if err != nil {
@@ -58,6 +66,17 @@ func (m *updateMetricsWorker) Work() error {
 
 	m.storage.AddCounter(context.TODO(), models.NewCounterMetric(pollCount, 1))
 	m.storage.SetGauge(context.TODO(), models.NewGaugeMetric(randomValue, randFloats()))
+
+	//В 13 ИНКРЕМЕНТЕ В ТЕСТАХ ОТКУДА-ТО ВЫЛЕЗЛИ МЕТРИКИ ВНЕ ПАКЕТА RUNTIME TotalMemory FreeMemory CPUutilization1
+	//ДЛЯ ПЕРВЫХ 2х ПОДКЛЮЧИЛ github.com/pbnjay/memory
+	m.storage.SetGauge(context.TODO(), models.NewGaugeMetric(totalMemory, float64(memory.TotalMemory())))
+	m.storage.SetGauge(context.TODO(), models.NewGaugeMetric(freeMemory, float64(memory.FreeMemory())))
+	//ДЛЯ CPUutilization1 - github.com/shirou/gopsutil
+	percentage, err := cpu.Percent(0, true)
+	if err != nil {
+		return fmt.Errorf("cannot get cpu utilization: %w", err)
+	}
+	m.storage.SetGauge(context.TODO(), models.NewGaugeMetric(cpuUtilization, percentage[0]))
 
 	return nil
 }
