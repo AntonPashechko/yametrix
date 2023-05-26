@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	updates = "updates/"
+	updates = "updates"
 )
 
 type httpSendWorker struct {

@@ -106,13 +106,13 @@ func TestMemStorage_GetMetricsList(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			storage := NewStorage()
 			for k, g := range tt.start.gauge {
-				storage.SetGauge(context.TODO(), models.NewGaugeMetric(k, g))
+				storage.SetGauge(context.Background(), models.NewGaugeMetric(k, g))
 			}
 			for k, c := range tt.start.counter {
-				storage.AddCounter(context.TODO(), models.NewCounterMetric(k, c))
+				storage.AddCounter(context.Background(), models.NewCounterMetric(k, c))
 			}
 
-			list, err := storage.GetMetricsList(context.TODO())
+			list, err := storage.GetMetricsList(context.Background())
 			assert.NoError(t, err)
 
 			if tt.isWant {

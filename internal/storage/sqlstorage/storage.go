@@ -28,7 +28,7 @@ func NewStorage(dns string) (*Storage, error) {
 	}
 
 	storage := &Storage{conn: conn}
-	if err := storage.bootstrap(context.TODO()); err != nil {
+	if err := storage.bootstrap(context.Background()); err != nil {
 		return nil, fmt.Errorf("cannot bootstarp db: %w", err)
 	}
 	return &Storage{conn: conn}, nil
@@ -59,13 +59,6 @@ func (m *Storage) bootstrap(ctx context.Context) error {
 	return tx.Commit()
 }
 
-// Проверяем, что запись о метрике присутствует в таблице
-func (m *Storage) isMerticExist(ctx context.Context, metric models.MetricDTO) bool {
-	row := m.conn.QueryRowContext(ctx, "SELECT id FROM metrics WHERE id = $1", metric.ID)
-	err := row.Scan(&metric.ID)
-	return !(err != nil && err == sql.ErrNoRows)
-}
-
 // GetGauge implements storage.MetricsStorage
 func (m *Storage) getMetricByID(ctx context.Context, id string) (*models.MetricDTO, error) {
 	// делаем запрос
@@ -83,21 +76,12 @@ func (m *Storage) getMetricByID(ctx context.Context, id string) (*models.MetricD
 // AddCounter implements storage.MetricsStorage
 func (m *Storage) AddCounter(ctx context.Context, metric models.MetricDTO) (*models.MetricDTO, error) {
 	//Если метрики с таким именем не существует - вставляем, иначе обновляем
-	if m.isMerticExist(ctx, metric) {
-		_, err := m.conn.ExecContext(ctx,
-			"UPDATE metrics SET delta = delta + $1 WHERE id = $2", metric.Delta, metric.ID)
+	_, err := m.conn.ExecContext(ctx,
+		"INSERT INTO metrics (id, type, delta) VALUES($1,$2,$3)"+
+			" ON CONFLICT (id) DO UPDATE SET delta = metrics.delta + $3", metric.ID, metric.MType, metric.Delta)
 
-		if err != nil {
-			return nil, fmt.Errorf("cannot update counter metric %s: %w", metric.ID, err)
-		}
-	} else {
-		_, err := m.conn.ExecContext(ctx,
-			"INSERT INTO metrics (id, type, delta)"+
-				" VALUES($1,$2,$3)", metric.ID, metric.MType, metric.Delta)
-
-		if err != nil {
-			return nil, fmt.Errorf("cannot insert gauge metric %s: %w", metric.ID, err)
-		}
+	if err != nil {
+		return nil, fmt.Errorf("cannot insert gauge metric %s: %w", metric.ID, err)
 	}
 
 	return m.getMetricByID(ctx, metric.ID)
@@ -106,21 +90,12 @@ func (m *Storage) AddCounter(ctx context.Context, metric models.MetricDTO) (*mod
 // SetGauge implements storage.MetricsStorage
 func (m *Storage) SetGauge(ctx context.Context, metric models.MetricDTO) error {
 	//Если метрики с таким именем не существует - вставляем, иначе обновляем
-	if m.isMerticExist(ctx, metric) {
-		_, err := m.conn.ExecContext(ctx,
-			"UPDATE metrics SET value = $1 WHERE id = $2", metric.Value, metric.ID)
+	_, err := m.conn.ExecContext(ctx,
+		"INSERT INTO metrics (id, type, value) VALUES($1,$2,$3)"+
+			" ON CONFLICT (id) DO UPDATE SET value = $3", metric.ID, metric.MType, metric.Value)
 
-		if err != nil {
-			return fmt.Errorf("cannot update gauge metric %s: %w", metric.ID, err)
-		}
-	} else {
-		_, err := m.conn.ExecContext(ctx,
-			"INSERT INTO metrics (id, type, value)"+
-				" VALUES($1,$2,$3)", metric.ID, metric.MType, metric.Value)
-
-		if err != nil {
-			return fmt.Errorf("cannot insert gauge metric %s: %w", metric.ID, err)
-		}
+	if err != nil {
+		return fmt.Errorf("cannot insert gauge metric %s: %w", metric.ID, err)
 	}
 
 	return nil
@@ -151,37 +126,10 @@ func (m *Storage) AcceptMetricsBatch(ctx context.Context, metrics []models.Metri
 	}
 	defer counterStmt.Close()
 
-	/*insertStmt, err := tx.PrepareContext(ctx, "INSERT INTO metrics (id, type, delta, value) VALUES($1,$2,$3,$4)")
-	if err != nil {
-		return fmt.Errorf("cannot create a prepared statement for insert metric: %w", err)
-	}
-	defer insertStmt.Close()
-
-	updateGaugeStmt, err := tx.PrepareContext(ctx, "UPDATE metrics SET value = $1 WHERE id = $2")
-	if err != nil {
-		return fmt.Errorf("cannot create a prepared statement for update gauge metric: %w", err)
-	}
-	defer updateGaugeStmt.Close()
-
-	addCounterStmt, err := tx.PrepareContext(ctx, "UPDATE metrics SET delta = delta + $1 WHERE id = $2")
-	if err != nil {
-		return fmt.Errorf("cannot create a prepared statement for add counter metric: %w", err)
-	}
-	defer addCounterStmt.Close()*/
-
 	for _, metric := range metrics {
-		//В РАМКАХ ЗАПРОСА МОГУТ ПРИЙТИ МЕТРИКИ С ОДНИМ И ТЕМ ЖЕ ИМЕНЕМ (В ТЕСТАХ) - НУЖНО ПРОВЕРЯТЬ ЭТО В РАМКАХ ТРАНЗАКЦИИ
-		//НЕ МОГУ ИСПОЛЬЗОВАТЬ m.isMerticExist
-		//row := tx.QueryRowContext(ctx, "SELECT id FROM metrics WHERE id = $1", metric.ID)
-		//err := row.Scan(&metric.ID)
-		//isExist := !(err != nil && err == sql.ErrNoRows)
 
-		//if isExist {
 		if metric.MType == models.GaugeType {
-			/*_, err := updateGaugeStmt.ExecContext(ctx, metric.Value, metric.ID)
-			if err != nil {
-				return fmt.Errorf("cannot exec update gauge statement: %w", err)
-			}*/
+
 			_, err := gaugeStmt.ExecContext(ctx, metric.ID, metric.MType, metric.Value)
 			if err != nil {
 				return fmt.Errorf("cannot exec update gauge statement: %w", err)
@@ -192,18 +140,7 @@ func (m *Storage) AcceptMetricsBatch(ctx context.Context, metrics []models.Metri
 			if err != nil {
 				return fmt.Errorf("cannot exec update gauge statement: %w", err)
 			}
-
-			/*_, err := addCounterStmt.ExecContext(ctx, metric.Delta, metric.ID)
-			if err != nil {
-				return fmt.Errorf("cannot exec add counter statement: %w", err)
-			}*/
 		}
-		/*} else {
-			_, err := insertStmt.ExecContext(ctx, metric.ID, metric.MType, metric.Delta, metric.Value)
-			if err != nil {
-				return fmt.Errorf("cannot exec insert statement: %w", err)
-			}
-		}*/
 	}
 	// завершаем транзакцию
 	err = tx.Commit()
