@@ -10,6 +10,7 @@ import (
 	"github.com/AntonPashechko/yametrix/internal/agent/sender"
 	"github.com/AntonPashechko/yametrix/internal/agent/updater"
 	"github.com/AntonPashechko/yametrix/internal/scheduler"
+	"github.com/AntonPashechko/yametrix/internal/sign"
 	"github.com/AntonPashechko/yametrix/internal/storage/memstorage"
 )
 
@@ -22,6 +23,11 @@ func main() {
 	cfg, err := config.LoadAgentConfig()
 	if err != nil {
 		log.Fatalf("cannot load config: %s\n", err)
+	}
+
+	/*Инициализируем подписанта, если задан key*/
+	if cfg.SignKey != `` {
+		sign.Initialize([]byte(cfg.SignKey))
 	}
 
 	storage := memstorage.NewStorage()

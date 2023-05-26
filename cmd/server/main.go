@@ -35,5 +35,5 @@ func main() {
 		logger.Error("Server shutdown failed: %s", err)
 	}
 
-	logger.Info("Server has benn shutdown")
+	logger.Info("Server has been shutdown")
 }

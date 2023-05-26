@@ -14,6 +14,7 @@ import (
 	"github.com/AntonPashechko/yametrix/internal/server/config"
 	"github.com/AntonPashechko/yametrix/internal/server/handlers"
 	"github.com/AntonPashechko/yametrix/internal/server/restorer"
+	"github.com/AntonPashechko/yametrix/internal/sign"
 	"github.com/AntonPashechko/yametrix/internal/storage"
 	"github.com/AntonPashechko/yametrix/internal/storage/memstorage"
 	"github.com/AntonPashechko/yametrix/internal/storage/sqlstorage"
@@ -56,6 +57,12 @@ func Create(cfg *config.Config) (*App, error) {
 	router.Use(logger.Middleware)
 	//Подключаем middleware декомпрессии
 	router.Use(compress.Middleware)
+
+	//Если задан ключ для подписи - инициализируем объект, добавляем Middleware
+	if cfg.SignKey != `` {
+		sign.Initialize([]byte(cfg.SignKey))
+		router.Use(sign.Middleware)
+	}
 
 	metricsHandler := handlers.NewMetricsHandler(storage)
 	metricsHandler.Register(router)

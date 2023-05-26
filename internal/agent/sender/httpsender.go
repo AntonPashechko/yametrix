@@ -2,6 +2,7 @@ package sender
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/AntonPashechko/yametrix/internal/compress"
 	"github.com/AntonPashechko/yametrix/internal/scheduler"
+	"github.com/AntonPashechko/yametrix/internal/sign"
 	"github.com/AntonPashechko/yametrix/internal/storage/memstorage"
 	"github.com/go-resty/resty/v2"
 )
@@ -55,7 +57,7 @@ func (m *httpSendWorker) retriablePost(req *resty.Request, postURL string) error
 	return fmt.Errorf("cannot retriable post metric: %w", err)
 }
 
-func (m *httpSendWorker) postMetric(url string, buf []byte) error {
+func (m *httpSendWorker) postMetrics(url string, buf []byte) error {
 
 	buf, err := compress.GzipCompress(buf)
 	if err != nil {
@@ -66,6 +68,15 @@ func (m *httpSendWorker) postMetric(url string, buf []byte) error {
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Content-Encoding", "gzip").
 		SetBody(buf)
+
+	if sign.MetricsSigner != nil {
+		sign, err := sign.MetricsSigner.CreateSign(buf)
+		if err != nil {
+			return fmt.Errorf("cannot sign request body: %w", err)
+		}
+
+		req.SetHeader("HashSHA256", hex.EncodeToString(sign))
+	}
 
 	err = m.retriablePost(req, url)
 	if err != nil {
@@ -90,7 +101,7 @@ func (m *httpSendWorker) Work() error {
 		return fmt.Errorf("error encoding metrics %w", err)
 	}
 
-	err := m.postMetric(url, buf.Bytes())
+	err := m.postMetrics(url, buf.Bytes())
 	if err != nil {
 		return fmt.Errorf("cannot send metrics batch: %w", err)
 	}

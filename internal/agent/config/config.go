@@ -13,6 +13,7 @@ type Config struct {
 	ServerEndpoint string
 	ReportInterval int64
 	PollInterval   int64
+	SignKey        string
 }
 
 func LoadAgentConfig() (*Config, error) {
@@ -21,6 +22,7 @@ func LoadAgentConfig() (*Config, error) {
 	flag.StringVar(&cfg.ServerEndpoint, "a", "http://localhost:8080", "server address and port")
 	flag.Int64Var(&cfg.ReportInterval, "r", 10, "report interval")
 	flag.Int64Var(&cfg.PollInterval, "p", 2, "poll interval")
+	flag.StringVar(&cfg.SignKey, "k", "", "sign key")
 
 	flag.Parse()
 
@@ -45,6 +47,10 @@ func LoadAgentConfig() (*Config, error) {
 			return nil, fmt.Errorf("cannot parse POLL_INTERVAL env: %w", err)
 		}
 		cfg.PollInterval = val
+	}
+
+	if signKey, exist := os.LookupEnv("KEY"); exist {
+		cfg.SignKey = signKey
 	}
 
 	if !strings.HasPrefix(cfg.ServerEndpoint, "http") && !strings.HasPrefix(cfg.ServerEndpoint, "https") {
