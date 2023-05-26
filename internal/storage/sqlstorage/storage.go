@@ -135,7 +135,23 @@ func (m *Storage) AcceptMetricsBatch(ctx context.Context, metrics []models.Metri
 	}
 	defer tx.Rollback()
 
-	insertStmt, err := tx.PrepareContext(ctx, "INSERT INTO metrics (id, type, delta, value) VALUES($1,$2,$3,$4)")
+	gaugeStmt, err := tx.PrepareContext(ctx,
+		"INSERT INTO metrics (id, type, value) VALUES($1,$2,$3)"+
+			" ON CONFLICT (id) DO UPDATE SET value = $3")
+	if err != nil {
+		return fmt.Errorf("cannot create a prepared statement for insert counter metric: %w", err)
+	}
+	defer gaugeStmt.Close()
+
+	counterStmt, err := tx.PrepareContext(ctx,
+		"INSERT INTO metrics (id, type, delta) VALUES($1,$2,$3)"+
+			" ON CONFLICT (id) DO UPDATE SET delta = metrics.delta + $3")
+	if err != nil {
+		return fmt.Errorf("cannot create a prepared statement for insert counter metric: %w", err)
+	}
+	defer counterStmt.Close()
+
+	/*insertStmt, err := tx.PrepareContext(ctx, "INSERT INTO metrics (id, type, delta, value) VALUES($1,$2,$3,$4)")
 	if err != nil {
 		return fmt.Errorf("cannot create a prepared statement for insert metric: %w", err)
 	}
@@ -151,33 +167,43 @@ func (m *Storage) AcceptMetricsBatch(ctx context.Context, metrics []models.Metri
 	if err != nil {
 		return fmt.Errorf("cannot create a prepared statement for add counter metric: %w", err)
 	}
-	defer addCounterStmt.Close()
+	defer addCounterStmt.Close()*/
 
 	for _, metric := range metrics {
 		//В РАМКАХ ЗАПРОСА МОГУТ ПРИЙТИ МЕТРИКИ С ОДНИМ И ТЕМ ЖЕ ИМЕНЕМ (В ТЕСТАХ) - НУЖНО ПРОВЕРЯТЬ ЭТО В РАМКАХ ТРАНЗАКЦИИ
 		//НЕ МОГУ ИСПОЛЬЗОВАТЬ m.isMerticExist
-		row := tx.QueryRowContext(ctx, "SELECT id FROM metrics WHERE id = $1", metric.ID)
-		err := row.Scan(&metric.ID)
-		isExist := !(err != nil && err == sql.ErrNoRows)
+		//row := tx.QueryRowContext(ctx, "SELECT id FROM metrics WHERE id = $1", metric.ID)
+		//err := row.Scan(&metric.ID)
+		//isExist := !(err != nil && err == sql.ErrNoRows)
 
-		if isExist {
-			if metric.MType == models.GaugeType {
-				_, err := updateGaugeStmt.ExecContext(ctx, metric.Value, metric.ID)
-				if err != nil {
-					return fmt.Errorf("cannot exec update gauge statement: %w", err)
-				}
-			} else {
-				_, err := addCounterStmt.ExecContext(ctx, metric.Delta, metric.ID)
-				if err != nil {
-					return fmt.Errorf("cannot exec add counter statement: %w", err)
-				}
+		//if isExist {
+		if metric.MType == models.GaugeType {
+			/*_, err := updateGaugeStmt.ExecContext(ctx, metric.Value, metric.ID)
+			if err != nil {
+				return fmt.Errorf("cannot exec update gauge statement: %w", err)
+			}*/
+			_, err := gaugeStmt.ExecContext(ctx, metric.ID, metric.MType, metric.Value)
+			if err != nil {
+				return fmt.Errorf("cannot exec update gauge statement: %w", err)
 			}
+
 		} else {
+			_, err := counterStmt.ExecContext(ctx, metric.ID, metric.MType, metric.Delta)
+			if err != nil {
+				return fmt.Errorf("cannot exec update gauge statement: %w", err)
+			}
+
+			/*_, err := addCounterStmt.ExecContext(ctx, metric.Delta, metric.ID)
+			if err != nil {
+				return fmt.Errorf("cannot exec add counter statement: %w", err)
+			}*/
+		}
+		/*} else {
 			_, err := insertStmt.ExecContext(ctx, metric.ID, metric.MType, metric.Delta, metric.Value)
 			if err != nil {
 				return fmt.Errorf("cannot exec insert statement: %w", err)
 			}
-		}
+		}*/
 	}
 	// завершаем транзакцию
 	err = tx.Commit()
