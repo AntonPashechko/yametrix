@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/AntonPashechko/yametrix/internal/models"
@@ -15,7 +16,10 @@ const (
 	setGaugeSQL       = "INSERT INTO metrics (id, type, value) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET value = $3"
 	addCounterSQL     = "INSERT INTO metrics (id, type, delta) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET delta = metrics.delta + $3"
 	getAllMerticsSQL  = "SELECT * FROM metrics"
-	selectMerticsById = "SELECT * FROM metrics WHERE id = $1"
+	selectMerticsByID = "SELECT * FROM metrics WHERE id = $1"
+
+	setGaugesBatch   = "INSERT INTO metrics (id, type, value) VALUES %s ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value"
+	setCountersBatch = "INSERT INTO metrics (id, type, delta) VALUES %s ON CONFLICT (id) DO UPDATE SET delta = metrics.delta + EXCLUDED.delta"
 )
 
 var _ storage.MetricsStorage = &Storage{}
@@ -69,7 +73,7 @@ func (m *Storage) applyDBMigrations(ctx context.Context) error {
 // GetGauge implements storage.MetricsStorage
 func (m *Storage) getMetricByID(ctx context.Context, id string) (*models.MetricDTO, error) {
 	// делаем запрос
-	row := m.conn.QueryRowContext(ctx, selectMerticsById, id)
+	row := m.conn.QueryRowContext(ctx, selectMerticsByID, id)
 	// готовим переменную для чтения результата
 
 	var metric models.MetricDTO
@@ -105,6 +109,76 @@ func (m *Storage) SetGauge(ctx context.Context, metric models.MetricDTO) error {
 }
 
 func (m *Storage) AcceptMetricsBatch(ctx context.Context, metrics []models.MetricDTO) error {
+
+	/*Нужно сразу правильно подготовить данные, не должно быть повторяющихся метрик в batch запросе, ON CONFLICT не поможет
+	https://pganalyze.com/docs/log-insights/app-errors/U126
+	ON CONFLICT поможет только если в базе уже есть такая метрика*/
+
+	gaugesMap := make(map[string]models.MetricDTO, 0)
+	countersMap := make(map[string]models.MetricDTO, 0)
+
+	for _, metric := range metrics {
+
+		if metric.MType == models.GaugeType {
+			//Тут фиксируем последнюю метрику
+			gaugesMap[metric.ID] = metric
+		} else {
+			//А тут суммируем
+			if value, ok := countersMap[metric.ID]; ok {
+				value.SetDelta(*value.Delta + *metric.Delta)
+			} else {
+				countersMap[metric.ID] = metric
+			}
+		}
+	}
+
+	// начинаем транзакцию
+	tx, err := m.conn.Begin()
+	if err != nil {
+		return fmt.Errorf("cannot start a transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	if len(gaugesMap) > 0 {
+		//Тут составляем запрос для gauges
+		gauges := make([]string, 0)
+		for _, metric := range gaugesMap {
+			gauges = append(gauges, fmt.Sprintf("('%s', '%s', %f)", metric.ID, metric.MType, *metric.Value))
+		}
+
+		gaugesReq := fmt.Sprintf(setGaugesBatch, strings.Join(gauges, ", "))
+
+		_, err = tx.ExecContext(ctx, gaugesReq)
+		if err != nil {
+			return fmt.Errorf("cannot exec gauges batch: %w", err)
+		}
+	}
+
+	if len(countersMap) > 0 {
+		//Тут составляем запрос для gauges
+		counters := make([]string, 0)
+		for _, metric := range countersMap {
+			counters = append(counters, fmt.Sprintf("('%s', '%s', %d)", metric.ID, metric.MType, *metric.Delta))
+		}
+
+		countersReq := fmt.Sprintf(setCountersBatch, strings.Join(counters, ", "))
+
+		_, err = tx.ExecContext(ctx, countersReq)
+		if err != nil {
+			return fmt.Errorf("cannot exec counters batch: %w", err)
+		}
+	}
+
+	// завершаем транзакцию
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("cannot commit the transaction: %w", err)
+	}
+
+	return nil
+}
+
+func (m *Storage) AcceptMetricsTransaction(ctx context.Context, metrics []models.MetricDTO) error {
 
 	// начинаем транзакцию
 	tx, err := m.conn.Begin()

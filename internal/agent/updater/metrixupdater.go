@@ -61,22 +61,22 @@ func (m *updateMetricsWorker) Work() error {
 	}
 
 	for _, gaugeName := range RuntimeGaugesName {
-		m.storage.SetGauge(context.TODO(), models.NewGaugeMetric(gaugeName, fields[gaugeName].(float64)))
+		m.storage.SetGauge(context.Background(), models.NewGaugeMetric(gaugeName, fields[gaugeName].(float64)))
 	}
 
-	m.storage.AddCounter(context.TODO(), models.NewCounterMetric(pollCount, 1))
-	m.storage.SetGauge(context.TODO(), models.NewGaugeMetric(randomValue, randFloats()))
+	m.storage.AddCounter(context.Background(), models.NewCounterMetric(pollCount, 1))
+	m.storage.SetGauge(context.Background(), models.NewGaugeMetric(randomValue, randFloats()))
 
 	//В 13 ИНКРЕМЕНТЕ В ТЕСТАХ ОТКУДА-ТО ВЫЛЕЗЛИ МЕТРИКИ ВНЕ ПАКЕТА RUNTIME TotalMemory FreeMemory CPUutilization1
 	//ДЛЯ ПЕРВЫХ 2х ПОДКЛЮЧИЛ github.com/pbnjay/memory
-	m.storage.SetGauge(context.TODO(), models.NewGaugeMetric(totalMemory, float64(memory.TotalMemory())))
-	m.storage.SetGauge(context.TODO(), models.NewGaugeMetric(freeMemory, float64(memory.FreeMemory())))
+	m.storage.SetGauge(context.Background(), models.NewGaugeMetric(totalMemory, float64(memory.TotalMemory())))
+	m.storage.SetGauge(context.Background(), models.NewGaugeMetric(freeMemory, float64(memory.FreeMemory())))
 	//ДЛЯ CPUutilization1 - github.com/shirou/gopsutil
 	percentage, err := cpu.Percent(0, true)
 	if err != nil {
 		return fmt.Errorf("cannot get cpu utilization: %w", err)
 	}
-	m.storage.SetGauge(context.TODO(), models.NewGaugeMetric(cpuUtilization, percentage[0]))
+	m.storage.SetGauge(context.Background(), models.NewGaugeMetric(cpuUtilization, percentage[0]))
 
 	return nil
 }

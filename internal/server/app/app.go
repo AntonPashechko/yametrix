@@ -27,7 +27,7 @@ const (
 
 type App struct {
 	server     *http.Server
-	storage    storage.MetricsStorage //Нужно как то закрыть базу при shutsown? TODO
+	storage    storage.MetricsStorage
 	notifyStop context.CancelFunc
 }
 
