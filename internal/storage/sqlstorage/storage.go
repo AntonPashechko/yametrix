@@ -143,7 +143,8 @@ func (m *Storage) AcceptMetricsBatch(ctx context.Context, metrics []models.Metri
 		//Тут составляем запрос для gauges
 		gauges := make([]string, 0)
 		for _, metric := range gaugesMap {
-			gauges = append(gauges, fmt.Sprintf("('%s', '%s', %f)", metric.ID, metric.MType, *metric.Value))
+			gauges = append(gauges, fmt.Sprintf("('%s', '%s', %s)", metric.ID, metric.MType, utils.Float64ToStr(*metric.Value)))
+			//Без конвертации float скукожится и тесты не проходят
 		}
 
 		gaugesReq := fmt.Sprintf(setGaugesBatch, strings.Join(gauges, ", "))
