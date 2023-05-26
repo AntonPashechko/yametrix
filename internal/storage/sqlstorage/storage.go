@@ -11,6 +11,13 @@ import (
 	"github.com/AntonPashechko/yametrix/pkg/utils"
 )
 
+const (
+	setGaugeSQL       = "INSERT INTO metrics (id, type, value) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET value = $3"
+	addCounterSQL     = "INSERT INTO metrics (id, type, delta) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET delta = metrics.delta + $3"
+	getAllMerticsSQL  = "SELECT * FROM metrics"
+	selectMerticsById = "SELECT * FROM metrics WHERE id = $1"
+)
+
 var _ storage.MetricsStorage = &Storage{}
 
 // Store реализует интерфейс store.Store и позволяет взаимодействовать с СУБД PostgreSQL
@@ -28,18 +35,18 @@ func NewStorage(dns string) (*Storage, error) {
 	}
 
 	storage := &Storage{conn: conn}
-	if err := storage.bootstrap(context.Background()); err != nil {
+	if err := storage.applyDBMigrations(context.Background()); err != nil {
 		return nil, fmt.Errorf("cannot bootstarp db: %w", err)
 	}
 	return &Storage{conn: conn}, nil
 }
 
 // Bootstrap подготавливает БД к работе, создавая необходимые таблицы и индексы
-func (m *Storage) bootstrap(ctx context.Context) error {
+func (m *Storage) applyDBMigrations(ctx context.Context) error {
 	// запускаем транзакцию
 	tx, err := m.conn.BeginTx(ctx, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot begin transaction: %w", err)
 	}
 
 	// в случае неуспешного коммита все изменения транзакции будут отменены
@@ -62,7 +69,7 @@ func (m *Storage) bootstrap(ctx context.Context) error {
 // GetGauge implements storage.MetricsStorage
 func (m *Storage) getMetricByID(ctx context.Context, id string) (*models.MetricDTO, error) {
 	// делаем запрос
-	row := m.conn.QueryRowContext(ctx, "SELECT * FROM metrics WHERE id = $1", id)
+	row := m.conn.QueryRowContext(ctx, selectMerticsById, id)
 	// готовим переменную для чтения результата
 
 	var metric models.MetricDTO
@@ -76,9 +83,7 @@ func (m *Storage) getMetricByID(ctx context.Context, id string) (*models.MetricD
 // AddCounter implements storage.MetricsStorage
 func (m *Storage) AddCounter(ctx context.Context, metric models.MetricDTO) (*models.MetricDTO, error) {
 	//Если метрики с таким именем не существует - вставляем, иначе обновляем
-	_, err := m.conn.ExecContext(ctx,
-		"INSERT INTO metrics (id, type, delta) VALUES($1,$2,$3)"+
-			" ON CONFLICT (id) DO UPDATE SET delta = metrics.delta + $3", metric.ID, metric.MType, metric.Delta)
+	_, err := m.conn.ExecContext(ctx, addCounterSQL, metric.ID, metric.MType, metric.Delta)
 
 	if err != nil {
 		return nil, fmt.Errorf("cannot insert gauge metric %s: %w", metric.ID, err)
@@ -90,9 +95,7 @@ func (m *Storage) AddCounter(ctx context.Context, metric models.MetricDTO) (*mod
 // SetGauge implements storage.MetricsStorage
 func (m *Storage) SetGauge(ctx context.Context, metric models.MetricDTO) error {
 	//Если метрики с таким именем не существует - вставляем, иначе обновляем
-	_, err := m.conn.ExecContext(ctx,
-		"INSERT INTO metrics (id, type, value) VALUES($1,$2,$3)"+
-			" ON CONFLICT (id) DO UPDATE SET value = $3", metric.ID, metric.MType, metric.Value)
+	_, err := m.conn.ExecContext(ctx, setGaugeSQL, metric.ID, metric.MType, metric.Value)
 
 	if err != nil {
 		return fmt.Errorf("cannot insert gauge metric %s: %w", metric.ID, err)
@@ -110,17 +113,13 @@ func (m *Storage) AcceptMetricsBatch(ctx context.Context, metrics []models.Metri
 	}
 	defer tx.Rollback()
 
-	gaugeStmt, err := tx.PrepareContext(ctx,
-		"INSERT INTO metrics (id, type, value) VALUES($1,$2,$3)"+
-			" ON CONFLICT (id) DO UPDATE SET value = $3")
+	gaugeStmt, err := tx.PrepareContext(ctx, setGaugeSQL)
 	if err != nil {
 		return fmt.Errorf("cannot create a prepared statement for insert counter metric: %w", err)
 	}
 	defer gaugeStmt.Close()
 
-	counterStmt, err := tx.PrepareContext(ctx,
-		"INSERT INTO metrics (id, type, delta) VALUES($1,$2,$3)"+
-			" ON CONFLICT (id) DO UPDATE SET delta = metrics.delta + $3")
+	counterStmt, err := tx.PrepareContext(ctx, addCounterSQL)
 	if err != nil {
 		return fmt.Errorf("cannot create a prepared statement for insert counter metric: %w", err)
 	}
@@ -166,7 +165,7 @@ func (m *Storage) GetMetricsList(ctx context.Context) ([]string, error) {
 	list := make([]string, 0)
 
 	var metric models.MetricDTO
-	rows, err := m.conn.QueryContext(ctx, "SELECT * FROM metrics")
+	rows, err := m.conn.QueryContext(ctx, getAllMerticsSQL)
 	if err != nil {
 		return nil, fmt.Errorf("cannot query contex: %w", err)
 	}
