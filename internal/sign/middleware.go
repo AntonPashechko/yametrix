@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 
 	"github.com/AntonPashechko/yametrix/internal/logger"
@@ -44,7 +43,7 @@ func Middleware(h http.Handler) http.Handler {
 
 		// проверяем, что клиент отправил серверу заголовок HashSHA256
 		if bodyHash := r.Header.Get("HashSHA256"); bodyHash != `` {
-			buf, _ := ioutil.ReadAll(r.Body)
+			buf, _ := io.ReadAll(r.Body)
 
 			signValue, err := hex.DecodeString(bodyHash)
 			if err != nil {
@@ -58,6 +57,8 @@ func Middleware(h http.Handler) http.Handler {
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
+
+			logger.Info(string(buf))
 
 			rdr1 := io.NopCloser(bytes.NewBuffer(buf))
 			r.Body = rdr1
