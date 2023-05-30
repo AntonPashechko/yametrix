@@ -45,6 +45,8 @@ func Middleware(h http.Handler) http.Handler {
 		if bodyHash := r.Header.Get("HashSHA256"); bodyHash != `` {
 			buf, _ := io.ReadAll(r.Body)
 
+			logger.Info("input body: %s", string(buf))
+
 			signValue, err := hex.DecodeString(bodyHash)
 			if err != nil {
 				logger.Error(fmt.Sprintf("bad request sign value: %s", err))
@@ -57,8 +59,6 @@ func Middleware(h http.Handler) http.Handler {
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
-
-			logger.Info(string(buf))
 
 			rdr1 := io.NopCloser(bytes.NewBuffer(buf))
 			r.Body = rdr1

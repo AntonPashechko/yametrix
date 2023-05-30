@@ -3,7 +3,10 @@ package sign
 import (
 	"crypto/hmac"
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+
+	"github.com/AntonPashechko/yametrix/internal/logger"
 )
 
 var MetricsSigner *Signer
@@ -34,6 +37,9 @@ func (m *Signer) VerifySign(data []byte, signValue []byte) error {
 	if err != nil {
 		return fmt.Errorf("cannot create sign value: %s", err)
 	}
+
+	logger.Info("signValue: %s", hex.EncodeToString(signValue))
+	logger.Info("newSign: %s", hex.EncodeToString(newSign))
 
 	if !hmac.Equal(newSign, signValue) {
 		return fmt.Errorf("invalid signature: %s", err)
