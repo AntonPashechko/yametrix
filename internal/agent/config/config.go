@@ -3,6 +3,7 @@ package config
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
@@ -51,6 +52,7 @@ func LoadAgentConfig() (*Config, error) {
 
 	if signKey, exist := os.LookupEnv("KEY"); exist {
 		cfg.SignKey = signKey
+		log.Printf("AGENT SIGN_KEY env: %s", signKey)
 	}
 
 	if !strings.HasPrefix(cfg.ServerEndpoint, "http") && !strings.HasPrefix(cfg.ServerEndpoint, "https") {

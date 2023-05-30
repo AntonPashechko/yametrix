@@ -46,8 +46,6 @@ func (m *updateMetricsWorker) Work() error {
 	mem := new(runtime.MemStats)
 	runtime.ReadMemStats(mem)
 
-	memory.TotalMemory()
-
 	/*Делаем json, что бы было убоднее пройтись по нужным метрикам*/
 	jMetrics, err := json.Marshal(mem)
 	if err != nil {

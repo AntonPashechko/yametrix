@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"os"
 	"os/signal"
 	"syscall"
 
@@ -27,6 +28,7 @@ func main() {
 
 	/*Инициализируем подписанта, если задан key*/
 	if cfg.SignKey != `` {
+		os.Exit(1)
 		sign.Initialize([]byte(cfg.SignKey))
 	}
 
