@@ -19,6 +19,7 @@ type Config struct {
 	StorePath     string
 	Restore       bool
 	DataBaseDNS   string
+	SignKey       string
 }
 
 func newConfig(opt options) (*Config, error) {
@@ -26,6 +27,7 @@ func newConfig(opt options) (*Config, error) {
 		Endpoint:    opt.endpoint,
 		StorePath:   opt.storePath,
 		DataBaseDNS: opt.dbDNS,
+		SignKey:     opt.signKey,
 	}
 
 	restore, err := strconv.ParseBool(opt.restore)
@@ -57,6 +59,7 @@ type options struct {
 	storePath     string
 	restore       string
 	dbDNS         string
+	signKey       string
 }
 
 func LoadServerConfig() (*Config, error) {
@@ -72,6 +75,8 @@ func LoadServerConfig() (*Config, error) {
 
 	flag.StringVar(&opt.restore, "r", "true", "is restore")
 	flag.StringVar(&opt.dbDNS, "d", "", "db dns")
+
+	flag.StringVar(&opt.signKey, "k", "", "sign key")
 
 	flag.Parse()
 
@@ -99,6 +104,11 @@ func LoadServerConfig() (*Config, error) {
 	if dns, exist := os.LookupEnv("DATABASE_DSN"); exist {
 		logger.Info("DATABASE_DSN env: %s", dns)
 		opt.dbDNS = dns
+	}
+
+	if signKey, exist := os.LookupEnv("KEY"); exist {
+		logger.Info("SIGN_KEY env: %s", signKey)
+		opt.signKey = signKey
 	}
 
 	return newConfig(opt)
