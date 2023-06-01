@@ -59,16 +59,10 @@ func (m *httpSendWorker) retriablePost(req *resty.Request, postURL string) error
 
 func (m *httpSendWorker) postMetrics(url string, buf []byte) error {
 
-	buf, err := compress.GzipCompress(buf)
-	if err != nil {
-		return fmt.Errorf("cannot compress data: %w", err)
-	}
+	//Создали клиента
+	req := m.client.R()
 
-	req := m.client.R().
-		SetHeader("Content-Type", "application/json").
-		SetHeader("Content-Encoding", "gzip").
-		SetBody(buf)
-
+	//Проводим контроль целостности, если надо
 	if sign.MetricsSigner != nil {
 		sign, err := sign.MetricsSigner.CreateSign(buf)
 		if err != nil {
@@ -77,6 +71,16 @@ func (m *httpSendWorker) postMetrics(url string, buf []byte) error {
 
 		req.SetHeader("HashSHA256", hex.EncodeToString(sign))
 	}
+
+	//Компресим (после расчета для контроля целостности)
+	buf, err := compress.GzipCompress(buf)
+	if err != nil {
+		return fmt.Errorf("cannot compress data: %w", err)
+	}
+
+	req.SetHeader("Content-Type", "application/json").
+		SetHeader("Content-Encoding", "gzip").
+		SetBody(buf)
 
 	err = m.retriablePost(req, url)
 	if err != nil {
