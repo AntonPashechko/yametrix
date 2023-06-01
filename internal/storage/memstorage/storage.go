@@ -31,6 +31,14 @@ func NewStorage() *Storage {
 	return ms
 }
 
+func (m *Storage) ApplyMetric(ctx context.Context, metric models.MetricDTO) {
+	if metric.MType == models.GaugeType {
+		m.SetGauge(ctx, metric)
+	} else if metric.MType == models.CounterType {
+		m.AddCounter(ctx, metric)
+	}
+}
+
 func (m *Storage) SetGauge(ctx context.Context, metric models.MetricDTO) error {
 	mux.Lock()
 	defer mux.Unlock()

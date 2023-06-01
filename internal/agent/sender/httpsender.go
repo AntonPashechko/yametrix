@@ -2,16 +2,19 @@ package sender
 
 import (
 	"bytes"
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/AntonPashechko/yametrix/internal/agent/config"
 	"github.com/AntonPashechko/yametrix/internal/compress"
-	"github.com/AntonPashechko/yametrix/internal/scheduler"
+	"github.com/AntonPashechko/yametrix/internal/models"
 	"github.com/AntonPashechko/yametrix/internal/sign"
 	"github.com/AntonPashechko/yametrix/internal/storage/memstorage"
 	"github.com/go-resty/resty/v2"
@@ -21,23 +24,25 @@ const (
 	updates = "updates"
 )
 
-type httpSendWorker struct {
+type metricsConsumer struct {
 	storage            *memstorage.Storage
+	tickerTime         time.Duration
 	endpoint           string
 	client             *resty.Client
 	retriableIntervals []time.Duration
 }
 
-func NewHTTPSendWorker(storage *memstorage.Storage, endpoint string) scheduler.RecurringWorker {
-	return &httpSendWorker{
-		storage,
-		endpoint,
-		resty.New(),
-		[]time.Duration{time.Second, 3 * time.Second, 5 * time.Second, time.Nanosecond},
+func NewMetricsConsumer(cfg *config.Config) *metricsConsumer {
+	return &metricsConsumer{
+		storage:            memstorage.NewStorage(),
+		tickerTime:         time.Duration(cfg.ReportInterval) * time.Second,
+		endpoint:           cfg.ServerEndpoint,
+		client:             resty.New(),
+		retriableIntervals: []time.Duration{time.Second, 3 * time.Second, 5 * time.Second, time.Nanosecond},
 	}
 }
 
-func (m *httpSendWorker) retriablePost(req *resty.Request, postURL string) error {
+func (m *metricsConsumer) retriablePost(req *resty.Request, postURL string) error {
 	var err error
 	var urlErr *url.Error
 
@@ -57,7 +62,7 @@ func (m *httpSendWorker) retriablePost(req *resty.Request, postURL string) error
 	return fmt.Errorf("cannot retriable post metric: %w", err)
 }
 
-func (m *httpSendWorker) postMetrics(url string, buf []byte) error {
+func (m *metricsConsumer) postMetrics(buf []byte) error {
 
 	//Создали клиента
 	req := m.client.R()
@@ -82,7 +87,7 @@ func (m *httpSendWorker) postMetrics(url string, buf []byte) error {
 		SetHeader("Content-Encoding", "gzip").
 		SetBody(buf)
 
-	err = m.retriablePost(req, url)
+	err = m.retriablePost(req, strings.Join([]string{m.endpoint, updates}, "/"))
 	if err != nil {
 		return fmt.Errorf("cannot do request: %w", err)
 	}
@@ -90,25 +95,38 @@ func (m *httpSendWorker) postMetrics(url string, buf []byte) error {
 	return nil
 }
 
-func (m *httpSendWorker) Work() error {
-	metrics := m.storage.GetAllMetrics()
+func (m *metricsConsumer) Work(wg *sync.WaitGroup, ctx context.Context, metricCh <-chan models.MetricDTO) {
 
-	//В ЗАДАНИИ СКАЗАНО отправлять пустые батчи не нужно; (12 инкремент)
-	if len(metrics) == 0 {
-		return fmt.Errorf("metrics is empty")
+	defer wg.Done()
+
+	ticker := time.NewTicker(m.tickerTime)
+
+	for {
+		select {
+		// если канал doneCh закрылся, выходим из горутины
+		case <-ctx.Done():
+			return
+		//Сохораняем приходящие метрики от поставщиков
+		case mertic := <-metricCh:
+			m.storage.ApplyMetric(ctx, mertic)
+		// если doneCh не закрыт, отправляем результат вычисления в канал результата
+		case <-ticker.C:
+			metrics := m.storage.GetAllMetrics()
+
+			//В ЗАДАНИИ СКАЗАНО отправлять пустые батчи не нужно; (12 инкремент)
+			if len(metrics) == 0 {
+				break
+			}
+
+			buf := new(bytes.Buffer)
+			if err := json.NewEncoder(buf).Encode(metrics); err != nil {
+				//return fmt.Errorf("error encoding metrics %w", err)
+			}
+
+			err := m.postMetrics(buf.Bytes())
+			if err != nil {
+				//return fmt.Errorf("cannot send metrics batch: %w", err)
+			}
+		}
 	}
-
-	url := strings.Join([]string{m.endpoint, updates}, "/")
-
-	buf := new(bytes.Buffer)
-	if err := json.NewEncoder(buf).Encode(metrics); err != nil {
-		return fmt.Errorf("error encoding metrics %w", err)
-	}
-
-	err := m.postMetrics(url, buf.Bytes())
-	if err != nil {
-		return fmt.Errorf("cannot send metrics batch: %w", err)
-	}
-
-	return nil
 }
