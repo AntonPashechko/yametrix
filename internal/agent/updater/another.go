@@ -17,17 +17,17 @@ const (
 	cpuUtilization = "CPUutilization1"
 )
 
-type AtherMetricsProducer struct {
+type AnotherMetricsProducer struct {
 	tickerTime time.Duration
 }
 
-func NewAtherMetricsProducer(cfg *config.Config) *AtherMetricsProducer {
-	return &AtherMetricsProducer{
+func NewAnotherMetricsProducer(cfg *config.Config) *AnotherMetricsProducer {
+	return &AnotherMetricsProducer{
 		tickerTime: time.Duration(cfg.PollInterval) * time.Second,
 	}
 }
 
-func (m *AtherMetricsProducer) produceMetrics(metricCh chan<- models.MetricDTO) {
+func (m *AnotherMetricsProducer) produceMetrics(metricCh chan<- models.MetricDTO) {
 	//В 13 ИНКРЕМЕНТЕ В ТЕСТАХ ОТКУДА-ТО ВЫЛЕЗЛИ МЕТРИКИ ВНЕ ПАКЕТА RUNTIME TotalMemory FreeMemory CPUutilization1
 	//ДЛЯ ПЕРВЫХ 2х ПОДКЛЮЧИЛ github.com/pbnjay/memory
 	metricCh <- models.NewGaugeMetric(totalMemory, float64(memory.TotalMemory()))
@@ -42,17 +42,17 @@ func (m *AtherMetricsProducer) produceMetrics(metricCh chan<- models.MetricDTO) 
 	metricCh <- models.NewGaugeMetric(cpuUtilization, percentage[0])
 }
 
-func (m *AtherMetricsProducer) Work(wg *sync.WaitGroup, ctx context.Context, metricCh chan<- models.MetricDTO) {
+func (m *AnotherMetricsProducer) Work(ctx context.Context, wg *sync.WaitGroup, metricCh chan<- models.MetricDTO) {
 	defer wg.Done()
 
 	ticker := time.NewTicker(m.tickerTime)
 
 	for {
 		select {
-		// если канал doneCh закрылся, выходим из горутины
+		// выход по ctx
 		case <-ctx.Done():
 			return
-		// если doneCh не закрыт, отправляем результат вычисления в канал результата
+		// собираем метрики, пишем их в канал
 		case <-ticker.C:
 			m.produceMetrics(metricCh)
 		}

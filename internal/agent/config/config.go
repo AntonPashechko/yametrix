@@ -3,7 +3,6 @@ package config
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 
@@ -35,7 +34,6 @@ func LoadAgentConfig() (*Config, error) {
 	if interval, exist := os.LookupEnv("REPORT_INTERVAL"); exist {
 		val, err := utils.StrToInt64(interval)
 		if err != nil {
-			//Тут бы я продолжил с параметром по умолчанию... но да ладно
 			return nil, fmt.Errorf("cannot parse REPORT_INTERVAL env: %w", err)
 		}
 		cfg.ReportInterval = val
@@ -44,7 +42,6 @@ func LoadAgentConfig() (*Config, error) {
 	if interval, exist := os.LookupEnv("POLL_INTERVAL"); exist {
 		val, err := utils.StrToInt64(interval)
 		if err != nil {
-			//Тут бы я продолжил с параметром по умолчанию... но да ладно
 			return nil, fmt.Errorf("cannot parse POLL_INTERVAL env: %w", err)
 		}
 		cfg.PollInterval = val
@@ -52,7 +49,6 @@ func LoadAgentConfig() (*Config, error) {
 
 	if signKey, exist := os.LookupEnv("KEY"); exist {
 		cfg.SignKey = signKey
-		log.Printf("AGENT SIGN_KEY env: %s", signKey)
 	}
 
 	if !strings.HasPrefix(cfg.ServerEndpoint, "http") && !strings.HasPrefix(cfg.ServerEndpoint, "https") {

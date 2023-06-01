@@ -145,9 +145,8 @@ func (m *Storage) AcceptMetricsBatch(ctx context.Context, metrics []models.Metri
 		names := make([]interface{}, 0, len(gaugesMap))
 		i := 1
 		for _, metric := range gaugesMap {
-			gauges = append(gauges, fmt.Sprintf("($%d, 'gauge', %s)", i, utils.Float64ToStr(*metric.Value)))
+			gauges = append(gauges, fmt.Sprintf("($%d, 'gauge', %s)", i, utils.Float64ToStr(*metric.Value))) //Без конвертации float скукожится и тесты не проходят
 			i++
-			//Без конвертации float скукожится и тесты не проходят
 			names = append(names, metric.ID)
 		}
 
@@ -178,52 +177,6 @@ func (m *Storage) AcceptMetricsBatch(ctx context.Context, metrics []models.Metri
 		}
 	}
 
-	// завершаем транзакцию
-	err = tx.Commit()
-	if err != nil {
-		return fmt.Errorf("cannot commit the transaction: %w", err)
-	}
-
-	return nil
-}
-
-func (m *Storage) AcceptMetricsTransaction(ctx context.Context, metrics []models.MetricDTO) error {
-
-	// начинаем транзакцию
-	tx, err := m.conn.Begin()
-	if err != nil {
-		return fmt.Errorf("cannot start a transaction: %w", err)
-	}
-	defer tx.Rollback()
-
-	gaugeStmt, err := tx.PrepareContext(ctx, setGaugeSQL)
-	if err != nil {
-		return fmt.Errorf("cannot create a prepared statement for insert counter metric: %w", err)
-	}
-	defer gaugeStmt.Close()
-
-	counterStmt, err := tx.PrepareContext(ctx, addCounterSQL)
-	if err != nil {
-		return fmt.Errorf("cannot create a prepared statement for insert counter metric: %w", err)
-	}
-	defer counterStmt.Close()
-
-	for _, metric := range metrics {
-
-		if metric.MType == models.GaugeType {
-
-			_, err := gaugeStmt.ExecContext(ctx, metric.ID, metric.MType, metric.Value)
-			if err != nil {
-				return fmt.Errorf("cannot exec update gauge statement: %w", err)
-			}
-
-		} else {
-			_, err := counterStmt.ExecContext(ctx, metric.ID, metric.MType, metric.Delta)
-			if err != nil {
-				return fmt.Errorf("cannot exec update gauge statement: %w", err)
-			}
-		}
-	}
 	// завершаем транзакцию
 	err = tx.Commit()
 	if err != nil {

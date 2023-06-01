@@ -103,13 +103,13 @@ func (m *metricsConsumer) Work(wg *sync.WaitGroup, ctx context.Context, metricCh
 
 	for {
 		select {
-		// если канал doneCh закрылся, выходим из горутины
+		// выход по ctx
 		case <-ctx.Done():
 			return
 		//Сохораняем приходящие метрики от поставщиков
 		case mertic := <-metricCh:
 			m.storage.ApplyMetric(ctx, mertic)
-		// если doneCh не закрыт, отправляем результат вычисления в канал результата
+		// отправляем накопленые метрики на сервер
 		case <-ticker.C:
 			metrics := m.storage.GetAllMetrics()
 
@@ -120,12 +120,12 @@ func (m *metricsConsumer) Work(wg *sync.WaitGroup, ctx context.Context, metricCh
 
 			buf := new(bytes.Buffer)
 			if err := json.NewEncoder(buf).Encode(metrics); err != nil {
-				//return fmt.Errorf("error encoding metrics %w", err)
+				fmt.Printf("error encoding metrics %s\n", err)
 			}
 
 			err := m.postMetrics(buf.Bytes())
 			if err != nil {
-				//return fmt.Errorf("cannot send metrics batch: %w", err)
+				fmt.Printf("cannot send metrics batch: %s\n", err)
 			}
 		}
 	}

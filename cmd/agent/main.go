@@ -30,7 +30,7 @@ func main() {
 	defer stop()
 
 	runtime := updater.NewRuntimeMetricsProducer(cfg)
-	ather := updater.NewAtherMetricsProducer(cfg)
+	another := updater.NewAnotherMetricsProducer(cfg)
 	consumer := sender.NewMetricsConsumer(cfg)
 
 	metricCh := make(chan models.MetricDTO)
@@ -38,9 +38,9 @@ func main() {
 	var wg sync.WaitGroup
 	wg.Add(3)
 
-	go runtime.Work(&wg, ctx, metricCh)
-	go ather.Work(&wg, ctx, metricCh)
-	go consumer.Work(&wg, ctx, metricCh)
+	go runtime.Work(ctx, &wg, metricCh)
+	go another.Work(ctx, &wg, metricCh)
+	go consumer.Work(ctx, &wg, metricCh)
 
 	wg.Wait()
 }

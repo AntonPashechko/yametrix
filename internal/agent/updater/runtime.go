@@ -3,6 +3,7 @@ package updater
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"math/rand"
 	"runtime"
 	"sync"
@@ -10,8 +11,6 @@ import (
 
 	"github.com/AntonPashechko/yametrix/internal/agent/config"
 	"github.com/AntonPashechko/yametrix/internal/models"
-	"github.com/pbnjay/memory"
-	"github.com/shirou/gopsutil/cpu"
 )
 
 const (
@@ -51,13 +50,13 @@ func (m *RuntimeMetricsProducer) produceMetrics(metricCh chan<- models.MetricDTO
 	/*Делаем json, что бы было удобнее пройтись по нужным метрикам*/
 	jMetrics, err := json.Marshal(mem)
 	if err != nil {
-		//return fmt.Errorf("cannot marshal json: %w", err)
+		fmt.Printf("cannot marshal json: %s\n", err)
 	}
 
 	var fields map[string]interface{}
 	err = json.Unmarshal(jMetrics, &fields)
 	if err != nil {
-		//return fmt.Errorf("cannot unmarshal json: %w", err)
+		fmt.Printf("cannot unmarshal json: %s\n", err)
 	}
 
 	for _, gaugeName := range RuntimeGaugesName {
@@ -66,19 +65,6 @@ func (m *RuntimeMetricsProducer) produceMetrics(metricCh chan<- models.MetricDTO
 
 	metricCh <- models.NewCounterMetric(pollCount, 1)
 	metricCh <- models.NewGaugeMetric(randomValue, randFloats())
-
-	//В 13 ИНКРЕМЕНТЕ В ТЕСТАХ ОТКУДА-ТО ВЫЛЕЗЛИ МЕТРИКИ ВНЕ ПАКЕТА RUNTIME TotalMemory FreeMemory CPUutilization1
-	//ДЛЯ ПЕРВЫХ 2х ПОДКЛЮЧИЛ github.com/pbnjay/memory
-	metricCh <- models.NewGaugeMetric(totalMemory, float64(memory.TotalMemory()))
-	metricCh <- models.NewGaugeMetric(freeMemory, float64(memory.FreeMemory()))
-
-	//ДЛЯ CPUutilization1 - github.com/shirou/gopsutil
-	percentage, err := cpu.Percent(0, true)
-	if err != nil {
-		//return fmt.Errorf("cannot get cpu utilization: %w", err)
-	}
-
-	metricCh <- models.NewGaugeMetric(cpuUtilization, percentage[0])
 }
 
 func (m *RuntimeMetricsProducer) Work(wg *sync.WaitGroup, ctx context.Context, metricCh chan<- models.MetricDTO) {
@@ -88,10 +74,10 @@ func (m *RuntimeMetricsProducer) Work(wg *sync.WaitGroup, ctx context.Context, m
 
 	for {
 		select {
-		// если канал doneCh закрылся, выходим из горутины
+		// выход по ctx
 		case <-ctx.Done():
 			return
-		// если doneCh не закрыт, отправляем результат вычисления в канал результата
+		// собираем метрики, пишем их в канал
 		case <-ticker.C:
 			m.produceMetrics(metricCh)
 		}
