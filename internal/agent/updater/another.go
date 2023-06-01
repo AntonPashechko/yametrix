@@ -2,6 +2,7 @@ package updater
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -36,7 +37,7 @@ func (m *AnotherMetricsProducer) produceMetrics(metricCh chan<- models.MetricDTO
 	//ДЛЯ CPUutilization1 - github.com/shirou/gopsutil
 	percentage, err := cpu.Percent(0, true)
 	if err != nil {
-		//return fmt.Errorf("cannot get cpu utilization: %w", err)
+		fmt.Printf("cannot get cpu utilization: %s\n", err)
 	}
 
 	metricCh <- models.NewGaugeMetric(cpuUtilization, percentage[0])

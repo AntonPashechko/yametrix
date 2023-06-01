@@ -67,7 +67,7 @@ func (m *RuntimeMetricsProducer) produceMetrics(metricCh chan<- models.MetricDTO
 	metricCh <- models.NewGaugeMetric(randomValue, randFloats())
 }
 
-func (m *RuntimeMetricsProducer) Work(wg *sync.WaitGroup, ctx context.Context, metricCh chan<- models.MetricDTO) {
+func (m *RuntimeMetricsProducer) Work(ctx context.Context, wg *sync.WaitGroup, metricCh chan<- models.MetricDTO) {
 	defer wg.Done()
 
 	ticker := time.NewTicker(m.tickerTime)

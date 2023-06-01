@@ -95,7 +95,7 @@ func (m *metricsConsumer) postMetrics(buf []byte) error {
 	return nil
 }
 
-func (m *metricsConsumer) Work(wg *sync.WaitGroup, ctx context.Context, metricCh <-chan models.MetricDTO) {
+func (m *metricsConsumer) Work(ctx context.Context, wg *sync.WaitGroup, metricCh <-chan models.MetricDTO) {
 
 	defer wg.Done()
 
