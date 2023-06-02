@@ -18,8 +18,8 @@ const (
 	getAllMerticsSQL  = "SELECT * FROM metrics"
 	selectMerticsByID = "SELECT * FROM metrics WHERE id = $1"
 
-	setGaugesBatch   = "INSERT INTO metrics (id, type, value) VALUES %s ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value"
-	setCountersBatch = "INSERT INTO metrics (id, type, delta) VALUES %s ON CONFLICT (id) DO UPDATE SET delta = metrics.delta + EXCLUDED.delta"
+	setGaugesBatch   = "INSERT INTO metrics (id, type, value) VALUES%s ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value"
+	setCountersBatch = "INSERT INTO metrics (id, type, delta) VALUES%s ON CONFLICT (id) DO UPDATE SET delta = metrics.delta + EXCLUDED.delta"
 )
 
 var _ storage.MetricsStorage = &Storage{}
@@ -141,15 +141,19 @@ func (m *Storage) AcceptMetricsBatch(ctx context.Context, metrics []models.Metri
 
 	if len(gaugesMap) > 0 {
 		//Тут составляем запрос для gauges
-		gauges := make([]string, 0)
+		gauges := make([]string, 0, len(gaugesMap))
+		names := make([]interface{}, 0, len(gaugesMap))
+		i := 1
 		for _, metric := range gaugesMap {
-			gauges = append(gauges, fmt.Sprintf("('%s', '%s', %s)", metric.ID, metric.MType, utils.Float64ToStr(*metric.Value)))
+			gauges = append(gauges, fmt.Sprintf("($%d, 'gauge', %s)", i, utils.Float64ToStr(*metric.Value)))
+			i++
 			//Без конвертации float скукожится и тесты не проходят
+			names = append(names, metric.ID)
 		}
 
-		gaugesReq := fmt.Sprintf(setGaugesBatch, strings.Join(gauges, ", "))
+		gaugesReq := fmt.Sprintf(setGaugesBatch, strings.Join(gauges, ","))
 
-		_, err = tx.ExecContext(ctx, gaugesReq)
+		_, err = tx.ExecContext(ctx, gaugesReq, names...)
 		if err != nil {
 			return fmt.Errorf("cannot exec gauges batch: %w", err)
 		}
@@ -157,14 +161,18 @@ func (m *Storage) AcceptMetricsBatch(ctx context.Context, metrics []models.Metri
 
 	if len(countersMap) > 0 {
 		//Тут составляем запрос для gauges
-		counters := make([]string, 0)
+		counters := make([]string, 0, len(countersMap))
+		names := make([]interface{}, 0, len(countersMap))
+		i := 1
 		for _, metric := range countersMap {
-			counters = append(counters, fmt.Sprintf("('%s', '%s', %d)", metric.ID, metric.MType, *metric.Delta))
+			counters = append(counters, fmt.Sprintf("($%d, 'counter', %d)", i, *metric.Delta))
+			i++
+			names = append(names, metric.ID)
 		}
 
-		countersReq := fmt.Sprintf(setCountersBatch, strings.Join(counters, ", "))
+		countersReq := fmt.Sprintf(setCountersBatch, strings.Join(counters, ","))
 
-		_, err = tx.ExecContext(ctx, countersReq)
+		_, err = tx.ExecContext(ctx, countersReq, names...)
 		if err != nil {
 			return fmt.Errorf("cannot exec counters batch: %w", err)
 		}
