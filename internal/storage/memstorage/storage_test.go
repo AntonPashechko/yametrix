@@ -4,8 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/AntonPashechko/yametrix/internal/models"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/AntonPashechko/yametrix/internal/models"
 )
 
 func TestNewStorage(t *testing.T) {

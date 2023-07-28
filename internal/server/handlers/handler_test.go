@@ -6,11 +6,12 @@ import (
 	"strings"
 	"testing"
 
-	memstorage "github.com/AntonPashechko/yametrix/internal/storage/memstorage"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	memstorage "github.com/AntonPashechko/yametrix/internal/storage/memstorage"
 )
 
 func testRequestWithBody(t *testing.T, ts *httptest.Server, method, path, body string) *resty.Response {

@@ -6,10 +6,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/AntonPashechko/yametrix/internal/agent/config"
-	"github.com/AntonPashechko/yametrix/internal/models"
 	"github.com/pbnjay/memory"
 	"github.com/shirou/gopsutil/cpu"
+
+	"github.com/AntonPashechko/yametrix/internal/agent/config"
+	"github.com/AntonPashechko/yametrix/internal/models"
 )
 
 const (

@@ -12,12 +12,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-resty/resty/v2"
+
 	"github.com/AntonPashechko/yametrix/internal/agent/config"
 	"github.com/AntonPashechko/yametrix/internal/compress"
 	"github.com/AntonPashechko/yametrix/internal/models"
 	"github.com/AntonPashechko/yametrix/internal/sign"
 	"github.com/AntonPashechko/yametrix/internal/storage/memstorage"
-	"github.com/go-resty/resty/v2"
 )
 
 const (

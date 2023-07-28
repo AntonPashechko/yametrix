@@ -9,6 +9,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+	_ "github.com/jackc/pgx/v5/stdlib"
+
 	"github.com/AntonPashechko/yametrix/internal/compress"
 	"github.com/AntonPashechko/yametrix/internal/logger"
 	"github.com/AntonPashechko/yametrix/internal/server/config"
@@ -18,8 +21,6 @@ import (
 	"github.com/AntonPashechko/yametrix/internal/storage"
 	"github.com/AntonPashechko/yametrix/internal/storage/memstorage"
 	"github.com/AntonPashechko/yametrix/internal/storage/sqlstorage"
-	"github.com/go-chi/chi/v5"
-	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 const (
