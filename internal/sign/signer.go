@@ -1,3 +1,4 @@
+// Пакет sign для контроля целостности запросов.
 package sign
 
 import (
@@ -9,18 +10,22 @@ import (
 	"github.com/AntonPashechko/yametrix/internal/logger"
 )
 
+// Через этот глобальный объект работает Middleware.
 var MetricsSigner *Signer
 
+// Storage хранит ключ подписи и реализует методы подписания и проверки.
 type Signer struct {
 	key []byte
 }
 
+// Initialize инициализирует синглтон MetricsSigner.
 func Initialize(key []byte) {
 	MetricsSigner = &Signer{
 		key: key,
 	}
 }
 
+// CreateSign вычисляет зачение подписи HMAC SHA-256.
 func (m *Signer) CreateSign(buf []byte) ([]byte, error) {
 	// подписываем алгоритмом HMAC, используя SHA-256
 	h := hmac.New(sha256.New, m.key)
@@ -32,6 +37,7 @@ func (m *Signer) CreateSign(buf []byte) ([]byte, error) {
 	return h.Sum(nil), nil
 }
 
+// VerifySign вычисляет зачение подписи HMAC SHA-256 и сразвнивает с переданым(непосредствено проверка подписи).
 func (m *Signer) VerifySign(data []byte, signValue []byte) error {
 	newSign, err := m.CreateSign(data)
 	if err != nil {

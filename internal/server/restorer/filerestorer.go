@@ -7,20 +7,20 @@ import (
 	"github.com/AntonPashechko/yametrix/internal/storage/memstorage"
 )
 
-type fileRestorer struct {
+type FileRestorer struct {
 	storeFileName string              //Имя файла для синхронизации данных
 	storage       *memstorage.Storage //Хранилище метрик
 }
 
-func NewFileRestorer(storage *memstorage.Storage, path string) MetricsRestorer {
+func NewFileRestorer(storage *memstorage.Storage, path string) FileRestorer {
 
-	return &fileRestorer{
+	return FileRestorer{
 		storeFileName: path,
 		storage:       storage,
 	}
 }
 
-func (m *fileRestorer) restore() error {
+func (m *FileRestorer) restore() error {
 	data, err := os.ReadFile(m.storeFileName)
 	if err != nil {
 		return fmt.Errorf("cannot read store file: %w", err)
@@ -30,7 +30,7 @@ func (m *fileRestorer) restore() error {
 }
 
 // Сохраняем метрики в файл
-func (m *fileRestorer) store() error {
+func (m *FileRestorer) store() error {
 	// получаем JSON формат метрик
 	data, err := m.storage.Marshal()
 	if err != nil {
@@ -40,6 +40,6 @@ func (m *fileRestorer) store() error {
 	return os.WriteFile(m.storeFileName, data, 0666)
 }
 
-func (m *fileRestorer) Work() error {
+func (m FileRestorer) Work() error {
 	return m.store()
 }

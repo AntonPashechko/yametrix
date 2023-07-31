@@ -71,8 +71,6 @@ func TestMiddleware(t *testing.T) {
 		{"test gzip req only", true, false},
 		{"test gzip resp only", false, true},
 		{"test all gzip", true, true},
-
-		//На cервер всегда прилетает заголовок ("Accept-Encoding", "gzip"), что бы я не делал, как это отключить?
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

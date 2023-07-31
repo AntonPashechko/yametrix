@@ -47,7 +47,7 @@ func Create(cfg *config.Config) (*App, error) {
 		//Хранилище метрик в памяти
 		memStorage := memstorage.NewStorage()
 		//Сторер
-		restorer.Initialize(memStorage, restorer.FileRestorer, cfg)
+		restorer.Initialize(memStorage, cfg)
 
 		storage = memStorage
 	}

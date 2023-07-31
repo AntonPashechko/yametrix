@@ -30,13 +30,3 @@ func Int64ToStr(i64 int64) string {
 func Float64ToStr(f64 float64) string {
 	return strconv.FormatFloat(f64, 'f', -1, 64)
 }
-
-func DeepCopyMap[K comparable, V any](src map[K]V) map[K]V {
-	dest := make(map[K]V, len(src))
-
-	for k, v := range src {
-		dest[k] = v
-	}
-
-	return dest
-}

@@ -1,3 +1,4 @@
+// Пакет memstorage предназначен для реализации хранилища метрик памяти приложения.
 package memstorage
 
 import (
@@ -12,16 +13,19 @@ import (
 
 var mux sync.Mutex
 
+// Storage реализует интерфейс storage.MetricsStorage и позволяет хранить метрики в памяти приложения.
 type Storage struct {
 	//ЗАГЛАВНЫЕ ЧТО БЫ СРАБОТАЛ json.Marshal
 	Gauge   map[string]models.MetricDTO
 	Counter map[string]models.MetricDTO
 }
 
+// clearCounter сбрасывает все counter метрики в 0.
 func (m *Storage) clearCounter() {
 	m.Counter = make(map[string]models.MetricDTO)
 }
 
+// NewStore возвращает новый экземпляр inmemory хранилища.
 func NewStorage() *Storage {
 
 	ms := &Storage{}
@@ -31,6 +35,7 @@ func NewStorage() *Storage {
 	return ms
 }
 
+// ApplyMetric принимает метрику и сохраняет/модифицирует ее в зависимостиот типа.
 func (m *Storage) ApplyMetric(ctx context.Context, metric models.MetricDTO) {
 	if metric.MType == models.GaugeType {
 		m.SetGauge(ctx, metric)
@@ -39,6 +44,7 @@ func (m *Storage) ApplyMetric(ctx context.Context, metric models.MetricDTO) {
 	}
 }
 
+// SetGauge добавляет/модифицирует gauge метрику.
 func (m *Storage) SetGauge(ctx context.Context, metric models.MetricDTO) error {
 	mux.Lock()
 	defer mux.Unlock()
@@ -47,6 +53,7 @@ func (m *Storage) SetGauge(ctx context.Context, metric models.MetricDTO) error {
 	return nil
 }
 
+// AddCounter добавляет/модифицирует counter метрику.
 func (m *Storage) AddCounter(ctx context.Context, metric models.MetricDTO) (*models.MetricDTO, error) {
 	mux.Lock()
 	defer mux.Unlock()
@@ -63,6 +70,7 @@ func (m *Storage) AddCounter(ctx context.Context, metric models.MetricDTO) (*mod
 	return &val, nil
 }
 
+// AcceptMetricsBatch принимает к добавлению/модификации массив метрик.
 func (m *Storage) AcceptMetricsBatch(ctx context.Context, metrics []models.MetricDTO) error {
 
 	for _, metric := range metrics {
@@ -76,6 +84,7 @@ func (m *Storage) AcceptMetricsBatch(ctx context.Context, metrics []models.Metri
 	return nil
 }
 
+// GetGauge возвращает gauge метрику по имени.
 func (m *Storage) GetGauge(ctx context.Context, key string) (*models.MetricDTO, error) {
 	mux.Lock()
 	defer mux.Unlock()
@@ -87,6 +96,7 @@ func (m *Storage) GetGauge(ctx context.Context, key string) (*models.MetricDTO, 
 	return &val, nil
 }
 
+// GetCounter возвращает сounter метрику по имени.
 func (m *Storage) GetCounter(ctx context.Context, key string) (*models.MetricDTO, error) {
 	mux.Lock()
 	defer mux.Unlock()
@@ -98,6 +108,7 @@ func (m *Storage) GetCounter(ctx context.Context, key string) (*models.MetricDTO
 	return &val, nil
 }
 
+// GetMetricsList возвращает все существующие метрики в виде массива строк.
 func (m *Storage) GetMetricsList(ctx context.Context) ([]string, error) {
 	mux.Lock()
 	defer mux.Unlock()
@@ -116,6 +127,7 @@ func (m *Storage) GetMetricsList(ctx context.Context) ([]string, error) {
 	return list, nil
 }
 
+// GetMetricsList возвращает все существующие метрики.
 func (m *Storage) GetAllMetrics() []models.MetricDTO {
 	mux.Lock()
 	defer mux.Unlock()
@@ -135,6 +147,7 @@ func (m *Storage) GetAllMetrics() []models.MetricDTO {
 	return metrics
 }
 
+// Marshal возвращает все существующие метрики в виде JSON.
 func (m *Storage) Marshal() ([]byte, error) {
 	mux.Lock()
 	defer mux.Unlock()
@@ -147,6 +160,7 @@ func (m *Storage) Marshal() ([]byte, error) {
 	return data, nil
 }
 
+// Restore восстанавливает метрики из JSON.
 func (m *Storage) Restore(data []byte) error {
 	mux.Lock()
 	defer mux.Unlock()
@@ -158,8 +172,10 @@ func (m *Storage) Restore(data []byte) error {
 	return nil
 }
 
+// PingStorage - для реализации интерфейса storage.MetricsStorage, не делает ничего.
 func (m *Storage) PingStorage(context.Context) error {
 	return nil
 }
 
+// Close - для реализации интерфейса storage.MetricsStorage, не делает ничего.
 func (m *Storage) Close() {}

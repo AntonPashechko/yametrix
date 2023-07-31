@@ -107,7 +107,7 @@ func (m *metricsConsumer) Work(ctx context.Context, wg *sync.WaitGroup, metricCh
 		// выход по ctx
 		case <-ctx.Done():
 			return
-		//Сохораняем приходящие метрики от поставщиков
+		//Сохраняем приходящие метрики от поставщиков
 		case mertic := <-metricCh:
 			m.storage.ApplyMetric(ctx, mertic)
 		// отправляем накопленые метрики на сервер
