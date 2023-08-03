@@ -1,3 +1,4 @@
+// Пакет handlers предназначен для реализации обработчиков пользовательских запросов.
 package handlers
 
 import (
@@ -16,16 +17,19 @@ import (
 	"github.com/AntonPashechko/yametrix/pkg/utils"
 )
 
+// MetricsHandler реализует методы обработчиков пользовательских запросов по работе с метриками.
 type MetricsHandler struct {
-	storage storage.MetricsStorage
+	storage storage.MetricsStorage // храниище метрик
 }
 
+// NewMetricsHandler создает экземпляр MetricsHandler.
 func NewMetricsHandler(storage storage.MetricsStorage) MetricsHandler {
 	return MetricsHandler{
 		storage: storage,
 	}
 }
 
+// Register регистрирует маршруты на роутере.
 func (m *MetricsHandler) Register(router *chi.Mux) {
 	router.Get("/", m.getAll)
 
@@ -50,11 +54,13 @@ func (m *MetricsHandler) Register(router *chi.Mux) {
 	})
 }
 
+// errorRespond устанавливает код ошибки и вызывает логирование.
 func (m *MetricsHandler) errorRespond(w http.ResponseWriter, code int, err error) {
 	logger.Error(err.Error())
 	w.WriteHeader(code)
 }
 
+// getAll возвращает весь список метрик.
 func (m *MetricsHandler) getAll(w http.ResponseWriter, r *http.Request) {
 	list, err := m.storage.GetMetricsList(r.Context())
 	if err != nil {
@@ -66,6 +72,7 @@ func (m *MetricsHandler) getAll(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, strings.Join(list, ", "))
 }
 
+// get возвращает метрику по имени и типу.
 func (m *MetricsHandler) get(w http.ResponseWriter, r *http.Request) {
 	mType := chi.URLParam(r, "type")
 	name := chi.URLParam(r, "name")
@@ -88,6 +95,7 @@ func (m *MetricsHandler) get(w http.ResponseWriter, r *http.Request) {
 	m.errorRespond(w, http.StatusNotFound, fmt.Errorf("cannot get metric: %s", err))
 }
 
+// update обновляет значение метрики по имени и типу.
 func (m *MetricsHandler) update(w http.ResponseWriter, r *http.Request) {
 	mType := chi.URLParam(r, "type")
 	name := chi.URLParam(r, "name")
@@ -124,6 +132,7 @@ func (m *MetricsHandler) update(w http.ResponseWriter, r *http.Request) {
 	m.errorRespond(w, http.StatusNotImplemented, fmt.Errorf("unknown metric type %s", mType))
 }
 
+// getJSON возвращает json представление метрики по имени и типу.
 func (m *MetricsHandler) getJSON(w http.ResponseWriter, r *http.Request) {
 
 	metric, err := models.NewMetricFromJSON(r.Body)
@@ -156,6 +165,7 @@ func (m *MetricsHandler) getJSON(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// updateJSON обновляет значение метрики по имени и типу из json представления.
 func (m *MetricsHandler) updateJSON(w http.ResponseWriter, r *http.Request) {
 
 	metric, err := models.NewMetricFromJSON(r.Body)
@@ -202,6 +212,7 @@ func (m *MetricsHandler) updateJSON(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// updateBatchJSON производит batch обновление списка метрик.
 func (m *MetricsHandler) updateBatchJSON(w http.ResponseWriter, r *http.Request) {
 	metrics, err := models.NewMetricsFromJSON(r.Body)
 	if err != nil {
@@ -215,6 +226,7 @@ func (m *MetricsHandler) updateBatchJSON(w http.ResponseWriter, r *http.Request)
 	}
 }
 
+// pingDB проверяет работоспособность хранилища метрик.
 func (m *MetricsHandler) pingDB(w http.ResponseWriter, r *http.Request) {
 
 	if err := m.storage.PingStorage(r.Context()); err != nil {

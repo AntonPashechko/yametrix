@@ -1,3 +1,4 @@
+// Пакет updater предназначени для сбора метрик на клиенте.
 package updater
 
 import (
@@ -14,21 +15,24 @@ import (
 )
 
 const (
-	totalMemory    = "TotalMemory"
-	freeMemory     = "FreeMemory"
-	cpuUtilization = "CPUutilization1"
+	totalMemory    = "TotalMemory"     // метрика типа TotalMemory
+	freeMemory     = "FreeMemory"      // метрика типа FreeMemory
+	cpuUtilization = "CPUutilization1" // метрика типа CPUutilization1
 )
 
+// AnotherMetricsProducer собирает метрики, которых нет в пакете runtime.
 type AnotherMetricsProducer struct {
-	tickerTime time.Duration
+	tickerTime time.Duration // интервал сбора метрик
 }
 
+// NewAnotherMetricsProducer создает экземпляр AnotherMetricsProducer.
 func NewAnotherMetricsProducer(cfg *config.Config) *AnotherMetricsProducer {
 	return &AnotherMetricsProducer{
 		tickerTime: time.Duration(cfg.PollInterval) * time.Second,
 	}
 }
 
+// produceMetrics собирает another метрики и отправляет из в канал метрик.
 func (m *AnotherMetricsProducer) produceMetrics(metricCh chan<- models.MetricDTO) {
 	//В 13 ИНКРЕМЕНТЕ В ТЕСТАХ ОТКУДА-ТО ВЫЛЕЗЛИ МЕТРИКИ ВНЕ ПАКЕТА RUNTIME TotalMemory FreeMemory CPUutilization1
 	//ДЛЯ ПЕРВЫХ 2х ПОДКЛЮЧИЛ github.com/pbnjay/memory
@@ -44,6 +48,7 @@ func (m *AnotherMetricsProducer) produceMetrics(metricCh chan<- models.MetricDTO
 	metricCh <- models.NewGaugeMetric(cpuUtilization, percentage[0])
 }
 
+// Work определяет работу, запускает по таймеру процедуру сбора метрик пока не пришел сигнал об отмене.
 func (m *AnotherMetricsProducer) Work(ctx context.Context, wg *sync.WaitGroup, metricCh chan<- models.MetricDTO) {
 	defer wg.Done()
 

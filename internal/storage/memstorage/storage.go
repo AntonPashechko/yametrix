@@ -16,8 +16,8 @@ var mux sync.Mutex
 // Storage реализует интерфейс storage.MetricsStorage и позволяет хранить метрики в памяти приложения.
 type Storage struct {
 	//ЗАГЛАВНЫЕ ЧТО БЫ СРАБОТАЛ json.Marshal
-	Gauge   map[string]models.MetricDTO
-	Counter map[string]models.MetricDTO
+	Gauge   map[string]models.MetricDTO // список метрик gauge типа
+	Counter map[string]models.MetricDTO // список метрик counter типа
 }
 
 // clearCounter сбрасывает все counter метрики в 0.

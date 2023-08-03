@@ -1,3 +1,4 @@
+// Пакет restorer предназначен для синхронизации inmemory хранилища метрик с файлом на диске.
 package restorer
 
 import (
@@ -7,11 +8,13 @@ import (
 	"github.com/AntonPashechko/yametrix/internal/storage/memstorage"
 )
 
+// FileRestorer синхронизирует хранилище метрик с файлом на диске.
 type FileRestorer struct {
 	storeFileName string              //Имя файла для синхронизации данных
 	storage       *memstorage.Storage //Хранилище метрик
 }
 
+// NewFileRestorer создает экземпляр FileRestorer.
 func NewFileRestorer(storage *memstorage.Storage, path string) FileRestorer {
 
 	return FileRestorer{
@@ -20,6 +23,7 @@ func NewFileRestorer(storage *memstorage.Storage, path string) FileRestorer {
 	}
 }
 
+// restore востанавливает хранилище из файла.
 func (m *FileRestorer) restore() error {
 	data, err := os.ReadFile(m.storeFileName)
 	if err != nil {
@@ -29,7 +33,7 @@ func (m *FileRestorer) restore() error {
 	return m.storage.Restore(data)
 }
 
-// Сохраняем метрики в файл
+// store сохраняет метрики в файл.
 func (m *FileRestorer) store() error {
 	// получаем JSON формат метрик
 	data, err := m.storage.Marshal()
@@ -40,6 +44,7 @@ func (m *FileRestorer) store() error {
 	return os.WriteFile(m.storeFileName, data, 0666)
 }
 
+// Work для реализации инфтрефейса RecurringWorker.
 func (m FileRestorer) Work() error {
 	return m.store()
 }

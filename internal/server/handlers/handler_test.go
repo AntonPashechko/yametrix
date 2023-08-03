@@ -1,17 +1,18 @@
 package handlers
 
 import (
+	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	memstorage "github.com/AntonPashechko/yametrix/internal/storage/memstorage"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	memstorage "github.com/AntonPashechko/yametrix/internal/storage/memstorage"
 )
 
 func testRequestWithBody(t *testing.T, ts *httptest.Server, method, path, body string) *resty.Response {
@@ -41,7 +42,7 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string) *http.R
 	return resp
 }
 
-func TestHandler_update(t *testing.T) {
+func TestMetricsHandler_update(t *testing.T) {
 	storage := memstorage.NewStorage()
 	router := chi.NewRouter()
 	metricsHandler := NewMetricsHandler(storage)
@@ -73,7 +74,7 @@ func TestHandler_update(t *testing.T) {
 	}
 }
 
-func TestHandler_updateJson(t *testing.T) {
+func TestMetricsHandler_updateJson(t *testing.T) {
 	storage := memstorage.NewStorage()
 	router := chi.NewRouter()
 	metricsHandler := NewMetricsHandler(storage)
@@ -121,4 +122,110 @@ func TestHandler_updateJson(t *testing.T) {
 			assert.Equal(t, tt.expectedBody, replacer.Replace(string(resp.Body())), "Значение ответа не совпадает с ожидаемым")
 		})
 	}
+}
+
+func TestMetricsHandler_updateBatchJSON(t *testing.T) {
+	storage := memstorage.NewStorage()
+	router := chi.NewRouter()
+	metricsHandler := NewMetricsHandler(storage)
+	metricsHandler.Register(router)
+
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+
+	tests := []struct {
+		name         string
+		body         string
+		expectedCode int
+	}{
+		{
+			name: "Simple test",
+			body: `[
+						{
+						"id" : "my1",
+						"type" : "counter",
+						"delta" : 123
+						},
+						{
+							"id" : "my2",
+							"type" : "counter",
+							"delta" : 123
+						}
+					]`,
+			expectedCode: http.StatusOK,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := testRequestWithBody(t, ts, "POST", "/updates/", tt.body)
+			assert.Equal(t, tt.expectedCode, resp.StatusCode(), "Код ответа не совпадает с ожидаемым")
+		})
+	}
+}
+
+func Example() {
+	storage := memstorage.NewStorage()
+	router := chi.NewRouter()
+	metricsHandler := NewMetricsHandler(storage)
+	metricsHandler.Register(router)
+
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+
+	//Добавим someMetric типа counter
+	req, _ := http.NewRequest("POST", ts.URL+"/update/counter/someMetric/527", nil)
+	resp, _ := ts.Client().Do(req)
+	resp.Body.Close()
+
+	//Получим someMetric и проверим что все норм
+	req, _ = http.NewRequest("GET", ts.URL+"/value/counter/someMetric", nil)
+	resp, _ = ts.Client().Do(req)
+	bodyBytes, _ := io.ReadAll(resp.Body)
+	fmt.Println(string(bodyBytes))
+	resp.Body.Close()
+
+	//Добавим testGauge типа gauge
+	req, _ = http.NewRequest("POST", ts.URL+"/update/gauge/testGauge/100", nil)
+	resp, _ = ts.Client().Do(req)
+	resp.Body.Close()
+
+	//Получим список метрик и проверим что обе метрики корректны
+	req, _ = http.NewRequest("GET", ts.URL+"/", nil)
+	resp, _ = ts.Client().Do(req)
+	bodyBytes, _ = io.ReadAll(resp.Body)
+	fmt.Println(string(bodyBytes))
+	resp.Body.Close()
+
+	//Проведем batch добавление метрик
+	req, _ = http.NewRequest("POST", ts.URL+"/updates",
+		strings.NewReader(`[
+								{
+									"id" : "newGauge",
+									"type" : "gauge",
+									"value" : 123.89
+								},
+								{
+									"id" : "newCounter",
+									"type" : "counter",
+									"delta" : 123
+								}
+							]`))
+	resp, _ = ts.Client().Do(req)
+	resp.Body.Close()
+
+	//получим newGauge метрику в виде json
+	req, _ = http.NewRequest("POST", ts.URL+"/value",
+		strings.NewReader(`{
+								"id" : "newGauge",
+								"type" : "gauge"
+							}`))
+	resp, _ = ts.Client().Do(req)
+	bodyBytes, _ = io.ReadAll(resp.Body)
+	fmt.Println(string(bodyBytes))
+	resp.Body.Close()
+
+	// Output:
+	// 527
+	// testGauge = 100, someMetric = 527
+	// {"id":"newGauge","type":"gauge","value":123.89}
 }

@@ -15,7 +15,7 @@ var MetricsSigner *Signer
 
 // Storage хранит ключ подписи и реализует методы подписания и проверки.
 type Signer struct {
-	key []byte
+	key []byte // ключ подписи
 }
 
 // Initialize инициализирует синглтон MetricsSigner.

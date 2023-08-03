@@ -33,8 +33,7 @@ var _ storage.MetricsStorage = &Storage{}
 
 // Storage реализует интерфейс storage.MetricsStorage и позволяет взаимодействовать с СУБД PostgreSQL.
 type Storage struct {
-	// Поле conn содержит объект соединения с СУБД
-	conn *sql.DB
+	conn *sql.DB // Поле conn содержит объект соединения с СУБД
 }
 
 // NewStore возвращает новый экземпляр PostgreSQL хранилища.

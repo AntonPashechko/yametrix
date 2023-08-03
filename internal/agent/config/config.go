@@ -1,3 +1,4 @@
+// Пакет config предназначен для инициализации конфигурации клиента.
 package config
 
 import (
@@ -9,13 +10,15 @@ import (
 	"github.com/AntonPashechko/yametrix/pkg/utils"
 )
 
+// Config содержит список параметров для работы клиента.
 type Config struct {
-	ServerEndpoint string
-	ReportInterval int64
-	PollInterval   int64
-	SignKey        string
+	ServerEndpoint string //эндпонт сервера
+	ReportInterval int64  //интервал отправки обновленных метрик
+	PollInterval   int64  //интервал обновления метрик
+	SignKey        string //ключ подписи для контроля целостности запроса/ответа
 }
 
+// LoadAgentConfig загружает настройки клиента из командной строки или переменных окружения.
 func LoadAgentConfig() (*Config, error) {
 	cfg := new(Config)
 	/*Получаем параметры из командной строки*/

@@ -1,3 +1,4 @@
+// Пакет sender предназначен для отправки метрик на сервер.
 package sender
 
 import (
@@ -25,14 +26,16 @@ const (
 	updates = "updates"
 )
 
+// metricsConsumer накапливает информацию о метриках и управляет их отправкой на сервер.
 type metricsConsumer struct {
-	storage            *memstorage.Storage
-	tickerTime         time.Duration
-	endpoint           string
-	client             *resty.Client
-	retriableIntervals []time.Duration
+	storage            *memstorage.Storage // хранилище метрик агента
+	tickerTime         time.Duration       // таймер для периодической отправки метрик на сервер
+	endpoint           string              // эндпоин сервера
+	client             *resty.Client       // клиент http
+	retriableIntervals []time.Duration     // массив retriable интрервалов для переотправки данных в случае сетевых проблем
 }
 
+// NewMetricsConsumer создает экземпляр metricsConsumer.
 func NewMetricsConsumer(cfg *config.Config) *metricsConsumer {
 	return &metricsConsumer{
 		storage:            memstorage.NewStorage(),
@@ -43,6 +46,7 @@ func NewMetricsConsumer(cfg *config.Config) *metricsConsumer {
 	}
 }
 
+// retriablePost реализует повторную отправку данных при наличии ошибок в сети.
 func (m *metricsConsumer) retriablePost(req *resty.Request, postURL string) error {
 	var err error
 	var urlErr *url.Error
@@ -63,6 +67,7 @@ func (m *metricsConsumer) retriablePost(req *resty.Request, postURL string) erro
 	return fmt.Errorf("cannot retriable post metric: %w", err)
 }
 
+// postMetrics отправка метрик на сервер.
 func (m *metricsConsumer) postMetrics(buf []byte) error {
 
 	//Создали клиента
@@ -96,6 +101,7 @@ func (m *metricsConsumer) postMetrics(buf []byte) error {
 	return nil
 }
 
+// Work управляет процессом получения новых метрик и оправкой их на сервер
 func (m *metricsConsumer) Work(ctx context.Context, wg *sync.WaitGroup, metricCh <-chan models.MetricDTO) {
 
 	defer wg.Done()
