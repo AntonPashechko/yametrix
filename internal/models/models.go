@@ -1,3 +1,4 @@
+// Пакет models содержит описание структур для взаиомдействия клиента и сервера.
 package models
 
 import (
@@ -7,10 +8,11 @@ import (
 )
 
 const (
-	GaugeType   = "gauge"
-	CounterType = "counter"
+	GaugeType   = "gauge"   // признак метрики типа gauge
+	CounterType = "counter" // признак метрики типа counter
 )
 
+// MetricDTO описывает метрику в json.
 type MetricDTO struct {
 	ID    string   `json:"id"`              // имя метрики
 	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
@@ -18,6 +20,7 @@ type MetricDTO struct {
 	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
 }
 
+// NewMetricFromJSON создает экземпляр MetricDTO из json.
 func NewMetricFromJSON(r io.Reader) (MetricDTO, error) {
 	var metric MetricDTO
 
@@ -28,6 +31,7 @@ func NewMetricFromJSON(r io.Reader) (MetricDTO, error) {
 	return metric, nil
 }
 
+// NewMetricsFromJSON создает массив MetricDTO из json.
 func NewMetricsFromJSON(r io.Reader) ([]MetricDTO, error) {
 	var metrics []MetricDTO
 
@@ -38,6 +42,7 @@ func NewMetricsFromJSON(r io.Reader) ([]MetricDTO, error) {
 	return metrics, nil
 }
 
+// NewGaugeMetric создает метрику типа gauge.
 func NewGaugeMetric(id string, value float64) MetricDTO {
 	mertics := MetricDTO{
 		ID:    id,
@@ -49,6 +54,7 @@ func NewGaugeMetric(id string, value float64) MetricDTO {
 	return mertics
 }
 
+// NewGaugeMetric создает метрику типа counter.
 func NewCounterMetric(id string, delta int64) MetricDTO {
 	mertics := MetricDTO{
 		ID:    id,
@@ -60,6 +66,7 @@ func NewCounterMetric(id string, delta int64) MetricDTO {
 	return mertics
 }
 
+// SetValue устанавливает значение gauge метрики.
 func (m *MetricDTO) SetValue(value float64) {
 	if m.Value == nil {
 		m.Value = new(float64)
@@ -68,6 +75,7 @@ func (m *MetricDTO) SetValue(value float64) {
 	*m.Value = value
 }
 
+// SetDelta устанавливает значение counter метрики.
 func (m *MetricDTO) SetDelta(delta int64) {
 	if m.Delta == nil {
 		m.Delta = new(int64)

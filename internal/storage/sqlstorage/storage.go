@@ -1,3 +1,4 @@
+// Пакет sqlstorage предназначен для реализации хранилища метрик в СУБД PostgreSQL.
 package sqlstorage
 
 import (
@@ -12,25 +13,30 @@ import (
 	"github.com/AntonPashechko/yametrix/pkg/utils"
 )
 
+// SQL запросы для взаимодействия с хранилищем.
 const (
-	setGaugeSQL       = "INSERT INTO metrics (id, type, value) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET value = $3"
-	addCounterSQL     = "INSERT INTO metrics (id, type, delta) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET delta = metrics.delta + $3"
-	getAllMerticsSQL  = "SELECT * FROM metrics"
+	// Добавление/модификация gauge метрики.
+	setGaugeSQL = "INSERT INTO metrics (id, type, value) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET value = $3"
+	// Добавление/модификация counter метрики.
+	addCounterSQL = "INSERT INTO metrics (id, type, delta) VALUES($1,$2,$3) ON CONFLICT (id) DO UPDATE SET delta = metrics.delta + $3"
+	// Получение всех метрик.
+	getAllMerticsSQL = "SELECT * FROM metrics"
+	// Получение метрики по ее имени.
 	selectMerticsByID = "SELECT * FROM metrics WHERE id = $1"
-
-	setGaugesBatch   = "INSERT INTO metrics (id, type, value) VALUES%s ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value"
+	// Batch добавление/модификация gauge метрик.
+	setGaugesBatch = "INSERT INTO metrics (id, type, value) VALUES%s ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value"
+	// Batch добавление/модификация counter метрик.
 	setCountersBatch = "INSERT INTO metrics (id, type, delta) VALUES%s ON CONFLICT (id) DO UPDATE SET delta = metrics.delta + EXCLUDED.delta"
 )
 
 var _ storage.MetricsStorage = &Storage{}
 
-// Store реализует интерфейс store.Store и позволяет взаимодействовать с СУБД PostgreSQL
+// Storage реализует интерфейс storage.MetricsStorage и позволяет взаимодействовать с СУБД PostgreSQL.
 type Storage struct {
-	// Поле conn содержит объект соединения с СУБД
-	conn *sql.DB
+	conn *sql.DB // Поле conn содержит объект соединения с СУБД
 }
 
-// NewStore возвращает новый экземпляр PostgreSQL хранилища
+// NewStore возвращает новый экземпляр PostgreSQL хранилища.
 func NewStorage(dns string) (*Storage, error) {
 	//Храним метрики в базе postgres
 	conn, err := sql.Open("pgx", dns)
@@ -45,7 +51,7 @@ func NewStorage(dns string) (*Storage, error) {
 	return &Storage{conn: conn}, nil
 }
 
-// Bootstrap подготавливает БД к работе, создавая необходимые таблицы и индексы
+// ApplyDBMigrations подготавливает БД к работе, создавая необходимые таблицы.
 func (m *Storage) applyDBMigrations(ctx context.Context) error {
 	// запускаем транзакцию
 	tx, err := m.conn.BeginTx(ctx, nil)
@@ -70,7 +76,7 @@ func (m *Storage) applyDBMigrations(ctx context.Context) error {
 	return tx.Commit()
 }
 
-// GetGauge implements storage.MetricsStorage
+// getMetricByID возвращает метрику по ее имени.
 func (m *Storage) getMetricByID(ctx context.Context, id string) (*models.MetricDTO, error) {
 	// делаем запрос
 	row := m.conn.QueryRowContext(ctx, selectMerticsByID, id)
@@ -84,7 +90,7 @@ func (m *Storage) getMetricByID(ctx context.Context, id string) (*models.MetricD
 	return &metric, nil
 }
 
-// AddCounter implements storage.MetricsStorage
+// AddCounter добавляет/модифицирует counter метрику.
 func (m *Storage) AddCounter(ctx context.Context, metric models.MetricDTO) (*models.MetricDTO, error) {
 	//Если метрики с таким именем не существует - вставляем, иначе обновляем
 	_, err := m.conn.ExecContext(ctx, addCounterSQL, metric.ID, metric.MType, metric.Delta)
@@ -96,7 +102,7 @@ func (m *Storage) AddCounter(ctx context.Context, metric models.MetricDTO) (*mod
 	return m.getMetricByID(ctx, metric.ID)
 }
 
-// SetGauge implements storage.MetricsStorage
+// SetGauge добавляет/модифицирует gauge метрику.
 func (m *Storage) SetGauge(ctx context.Context, metric models.MetricDTO) error {
 	//Если метрики с таким именем не существует - вставляем, иначе обновляем
 	_, err := m.conn.ExecContext(ctx, setGaugeSQL, metric.ID, metric.MType, metric.Value)
@@ -108,6 +114,7 @@ func (m *Storage) SetGauge(ctx context.Context, metric models.MetricDTO) error {
 	return nil
 }
 
+// AcceptMetricsBatch принимает к добавлению/модификации массив метрик.
 func (m *Storage) AcceptMetricsBatch(ctx context.Context, metrics []models.MetricDTO) error {
 
 	/*Нужно сразу правильно подготовить данные, не должно быть повторяющихся метрик в batch запросе, ON CONFLICT не поможет
@@ -186,16 +193,17 @@ func (m *Storage) AcceptMetricsBatch(ctx context.Context, metrics []models.Metri
 	return nil
 }
 
+// GetCounter возвращает сounter метрику по имени.
 func (m *Storage) GetCounter(ctx context.Context, key string) (*models.MetricDTO, error) {
 	return m.getMetricByID(ctx, key)
 }
 
-// GetGauge implements storage.MetricsStorage
+// GetGauge возвращает gauge метрику по имени.
 func (m *Storage) GetGauge(ctx context.Context, key string) (*models.MetricDTO, error) {
 	return m.getMetricByID(ctx, key)
 }
 
-// GetMetricsList implements storage.MetricsStorage
+// GetMetricsList возвращает все существующие метрики в виде массива строк.
 func (m *Storage) GetMetricsList(ctx context.Context) ([]string, error) {
 
 	list := make([]string, 0)
@@ -231,6 +239,7 @@ func (m *Storage) GetMetricsList(ctx context.Context) ([]string, error) {
 	return list, nil
 }
 
+// PingStorage проверяет жизнеспособность хранилища.
 func (m *Storage) PingStorage(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
@@ -238,6 +247,7 @@ func (m *Storage) PingStorage(ctx context.Context) error {
 	return m.conn.PingContext(ctx)
 }
 
+// Close закрывает хранилище метрик.
 func (m *Storage) Close() {
 	m.conn.Close()
 }
