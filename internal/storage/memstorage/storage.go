@@ -1,4 +1,4 @@
-// Пакет memstorage предназначен для реализации хранилища метрик памяти приложения.
+// Package memstorage предназначен для реализации хранилища метрик памяти приложения.
 package memstorage
 
 import (
@@ -25,7 +25,7 @@ func (m *Storage) clearCounter() {
 	m.Counter = make(map[string]models.MetricDTO)
 }
 
-// NewStore возвращает новый экземпляр inmemory хранилища.
+// NewStorage возвращает новый экземпляр inmemory хранилища.
 func NewStorage() *Storage {
 
 	ms := &Storage{}
@@ -74,11 +74,7 @@ func (m *Storage) AddCounter(ctx context.Context, metric models.MetricDTO) (*mod
 func (m *Storage) AcceptMetricsBatch(ctx context.Context, metrics []models.MetricDTO) error {
 
 	for _, metric := range metrics {
-		if metric.MType == models.GaugeType {
-			m.SetGauge(ctx, metric)
-		} else if metric.MType == models.CounterType {
-			m.AddCounter(ctx, metric)
-		}
+		m.ApplyMetric(ctx, metric)
 	}
 
 	return nil
@@ -127,7 +123,7 @@ func (m *Storage) GetMetricsList(ctx context.Context) ([]string, error) {
 	return list, nil
 }
 
-// GetMetricsList возвращает все существующие метрики.
+// GetAllMetrics возвращает все существующие метрики.
 func (m *Storage) GetAllMetrics() []models.MetricDTO {
 	mux.Lock()
 	defer mux.Unlock()

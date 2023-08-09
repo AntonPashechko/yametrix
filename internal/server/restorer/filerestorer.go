@@ -1,4 +1,4 @@
-// Пакет restorer предназначен для синхронизации inmemory хранилища метрик с файлом на диске.
+// Package restorer предназначен для синхронизации inmemory хранилища метрик с файлом на диске.
 package restorer
 
 import (
@@ -10,8 +10,8 @@ import (
 
 // FileRestorer синхронизирует хранилище метрик с файлом на диске.
 type FileRestorer struct {
-	storeFileName string              //Имя файла для синхронизации данных
 	storage       *memstorage.Storage //Хранилище метрик
+	storeFileName string              //Имя файла для синхронизации данных
 }
 
 // NewFileRestorer создает экземпляр FileRestorer.

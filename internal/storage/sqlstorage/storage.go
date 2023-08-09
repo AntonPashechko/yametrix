@@ -1,4 +1,4 @@
-// Пакет sqlstorage предназначен для реализации хранилища метрик в СУБД PostgreSQL.
+// Package sqlstorage предназначен для реализации хранилища метрик в СУБД PostgreSQL.
 package sqlstorage
 
 import (
@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AntonPashechko/yametrix/internal/logger"
 	"github.com/AntonPashechko/yametrix/internal/models"
 	"github.com/AntonPashechko/yametrix/internal/storage"
 	"github.com/AntonPashechko/yametrix/pkg/utils"
@@ -36,7 +37,7 @@ type Storage struct {
 	conn *sql.DB // Поле conn содержит объект соединения с СУБД
 }
 
-// NewStore возвращает новый экземпляр PostgreSQL хранилища.
+// NewStorage возвращает новый экземпляр PostgreSQL хранилища.
 func NewStorage(dns string) (*Storage, error) {
 	//Храним метрики в базе postgres
 	conn, err := sql.Open("pgx", dns)
@@ -63,7 +64,7 @@ func (m *Storage) applyDBMigrations(ctx context.Context) error {
 	defer tx.Rollback()
 
 	// создаём таблицу для хранения метрик
-	tx.ExecContext(ctx, `
+	_, err = tx.ExecContext(ctx, `
         CREATE TABLE IF NOT EXISTS metrics (
             id varchar(128) PRIMARY KEY,
 			type varchar(128),
@@ -71,6 +72,9 @@ func (m *Storage) applyDBMigrations(ctx context.Context) error {
 			value double precision
         )
     `)
+	if err != nil {
+		return fmt.Errorf("cannot create metrics table: %w", err)
+	}
 
 	// коммитим транзакцию
 	return tx.Commit()
@@ -249,5 +253,8 @@ func (m *Storage) PingStorage(ctx context.Context) error {
 
 // Close закрывает хранилище метрик.
 func (m *Storage) Close() {
-	m.conn.Close()
+	err := m.conn.Close()
+	if err != nil {
+		logger.Error("cannot close connection: %s", err)
+	}
 }

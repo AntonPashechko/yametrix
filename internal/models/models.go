@@ -1,4 +1,4 @@
-// Пакет models содержит описание структур для взаиомдействия клиента и сервера.
+// Package models содержит описание структур для взаиомдействия клиента и сервера.
 package models
 
 import (
@@ -14,10 +14,10 @@ const (
 
 // MetricDTO описывает метрику в json.
 type MetricDTO struct {
-	ID    string   `json:"id"`              // имя метрики
-	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
 	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
 	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
+	ID    string   `json:"id"`              // имя метрики
+	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
 }
 
 // NewMetricFromJSON создает экземпляр MetricDTO из json.
@@ -25,7 +25,7 @@ func NewMetricFromJSON(r io.Reader) (MetricDTO, error) {
 	var metric MetricDTO
 
 	if err := json.NewDecoder(r).Decode(&metric); err != nil {
-		return metric, fmt.Errorf("cannot decode metric from json: %s", err)
+		return metric, fmt.Errorf("cannot decode metric from json: %w", err)
 	}
 
 	return metric, nil
@@ -36,7 +36,7 @@ func NewMetricsFromJSON(r io.Reader) ([]MetricDTO, error) {
 	var metrics []MetricDTO
 
 	if err := json.NewDecoder(r).Decode(&metrics); err != nil {
-		return metrics, fmt.Errorf("cannot decode metric from json: %s", err)
+		return metrics, fmt.Errorf("cannot decode metric from json: %w", err)
 	}
 
 	return metrics, nil
@@ -54,7 +54,7 @@ func NewGaugeMetric(id string, value float64) MetricDTO {
 	return mertics
 }
 
-// NewGaugeMetric создает метрику типа counter.
+// NewCounterMetric создает метрику типа counter.
 func NewCounterMetric(id string, delta int64) MetricDTO {
 	mertics := MetricDTO{
 		ID:    id,

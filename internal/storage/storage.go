@@ -1,4 +1,4 @@
-// Пакет storage определяет интерфейс MetricsStorage.
+// Package storage определяет интерфейс MetricsStorage.
 package storage
 
 import (

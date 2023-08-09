@@ -60,7 +60,7 @@ func Middleware(h http.Handler) http.Handler {
 				return
 			}
 
-			if err := MetricsSigner.VerifySign(buf, signValue); err != nil {
+			if err := MetricsSigner.verifySign(buf, signValue); err != nil {
 				logger.Error(fmt.Sprintf("bad request signature: %s", err))
 				w.WriteHeader(http.StatusBadRequest)
 				return

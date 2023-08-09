@@ -18,7 +18,10 @@ func (m *Manager) store() {
 	//Если синхронная запись и шедулер не запущен
 	//По другому тут не проверить, твой вариант с nil не cработает, а я не хочу иметь здесь указатель
 	if m.scheduler == (scheduler.Scheduler{}) {
-		m.restorer.store()
+		err := m.restorer.store()
+		if err != nil {
+			logger.Error("cannot store metrics: %s", err)
+		}
 	}
 }
 
