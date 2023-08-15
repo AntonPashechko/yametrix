@@ -1,3 +1,4 @@
+// Package config предназначен для инициализации конфигурации сервера.
 package config
 
 import (
@@ -13,15 +14,17 @@ import (
 	"github.com/AntonPashechko/yametrix/pkg/utils"
 )
 
+// Config содержит список параметров для работы сервера.
 type Config struct {
-	Endpoint      string
-	StoreInterval uint64 //0 - синхронная запись
-	StorePath     string
-	Restore       bool
-	DataBaseDNS   string
-	SignKey       string
+	Endpoint      string // эндпоинт сервера
+	StorePath     string // путь к файлу синхронизации метрик
+	DataBaseDNS   string // строка подключения к БД
+	SignKey       string // ключ подписи
+	StoreInterval uint64 // интервал синхронизации метрик (0 - синхронная запись)
+	Restore       bool   // флаг синхронизации метрик из файла при запуске
 }
 
+// newConfig создает экземпляр Config на онове опций в строковом представлении.
 func newConfig(opt options) (*Config, error) {
 	cfg := &Config{
 		Endpoint:    opt.endpoint,
@@ -53,6 +56,7 @@ func newConfig(opt options) (*Config, error) {
 	return cfg, nil
 }
 
+// options содержит список параметров для работы сервера в строковом представлении.
 type options struct {
 	endpoint      string
 	storeInterval string
@@ -62,6 +66,7 @@ type options struct {
 	signKey       string
 }
 
+// LoadServerConfig загружает настройки сервера из командной строки или переменных окружения.
 func LoadServerConfig() (*Config, error) {
 
 	logger.Info(strings.Join(os.Args, " "))
