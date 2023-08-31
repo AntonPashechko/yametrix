@@ -1,3 +1,4 @@
+// Package sender предназначен для отправки метрик на сервер.
 package sender
 
 import (
@@ -12,26 +13,30 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-resty/resty/v2"
+
 	"github.com/AntonPashechko/yametrix/internal/agent/config"
 	"github.com/AntonPashechko/yametrix/internal/compress"
+	"github.com/AntonPashechko/yametrix/internal/encrypt"
 	"github.com/AntonPashechko/yametrix/internal/models"
 	"github.com/AntonPashechko/yametrix/internal/sign"
 	"github.com/AntonPashechko/yametrix/internal/storage/memstorage"
-	"github.com/go-resty/resty/v2"
 )
 
 const (
 	updates = "updates"
 )
 
+// metricsConsumer накапливает информацию о метриках и управляет их отправкой на сервер.
 type metricsConsumer struct {
-	storage            *memstorage.Storage
-	tickerTime         time.Duration
-	endpoint           string
-	client             *resty.Client
-	retriableIntervals []time.Duration
+	storage            *memstorage.Storage // хранилище метрик агента
+	tickerTime         time.Duration       // таймер для периодической отправки метрик на сервер
+	endpoint           string              // эндпоин сервера
+	client             *resty.Client       // клиент http
+	retriableIntervals []time.Duration     // массив retriable интрервалов для переотправки данных в случае сетевых проблем
 }
 
+// NewMetricsConsumer создает экземпляр metricsConsumer.
 func NewMetricsConsumer(cfg *config.Config) *metricsConsumer {
 	return &metricsConsumer{
 		storage:            memstorage.NewStorage(),
@@ -42,6 +47,7 @@ func NewMetricsConsumer(cfg *config.Config) *metricsConsumer {
 	}
 }
 
+// retriablePost реализует повторную отправку данных при наличии ошибок в сети.
 func (m *metricsConsumer) retriablePost(req *resty.Request, postURL string) error {
 	var err error
 	var urlErr *url.Error
@@ -62,10 +68,21 @@ func (m *metricsConsumer) retriablePost(req *resty.Request, postURL string) erro
 	return fmt.Errorf("cannot retriable post metric: %w", err)
 }
 
+// postMetrics отправка метрик на сервер.
 func (m *metricsConsumer) postMetrics(buf []byte) error {
 
 	//Создали клиента
 	req := m.client.R()
+
+	//Шифруем сообщение, если проинициализирован encryptor
+	if encrypt.MetricsEncryptor != nil {
+		encryptbuf, err := encrypt.MetricsEncryptor.Encrypt(buf)
+		if err != nil {
+			return fmt.Errorf("cannot encrypt metrics: %w", err)
+		}
+
+		buf = encryptbuf
+	}
 
 	//Проводим контроль целостности, если надо
 	if sign.MetricsSigner != nil {
@@ -95,6 +112,7 @@ func (m *metricsConsumer) postMetrics(buf []byte) error {
 	return nil
 }
 
+// Work управляет процессом получения новых метрик и оправкой их на сервер
 func (m *metricsConsumer) Work(ctx context.Context, wg *sync.WaitGroup, metricCh <-chan models.MetricDTO) {
 
 	defer wg.Done()
@@ -106,7 +124,7 @@ func (m *metricsConsumer) Work(ctx context.Context, wg *sync.WaitGroup, metricCh
 		// выход по ctx
 		case <-ctx.Done():
 			return
-		//Сохораняем приходящие метрики от поставщиков
+		//Сохраняем приходящие метрики от поставщиков
 		case mertic := <-metricCh:
 			m.storage.ApplyMetric(ctx, mertic)
 		// отправляем накопленые метрики на сервер

@@ -1,3 +1,4 @@
+// Package config предназначен для инициализации конфигурации клиента.
 package config
 
 import (
@@ -9,13 +10,16 @@ import (
 	"github.com/AntonPashechko/yametrix/pkg/utils"
 )
 
+// Config содержит список параметров для работы клиента.
 type Config struct {
-	ServerEndpoint string
-	ReportInterval int64
-	PollInterval   int64
-	SignKey        string
+	ServerEndpoint string //эндпонт сервера
+	SignKey        string //ключ подписи для контроля целостности запроса/ответа
+	CryptoKey      string //путь до файла с публичным ключом сервера для шифрования данных
+	ReportInterval int64  //интервал отправки обновленных метрик
+	PollInterval   int64  //интервал обновления метрик
 }
 
+// LoadAgentConfig загружает настройки клиента из командной строки или переменных окружения.
 func LoadAgentConfig() (*Config, error) {
 	cfg := new(Config)
 	/*Получаем параметры из командной строки*/
@@ -23,6 +27,7 @@ func LoadAgentConfig() (*Config, error) {
 	flag.Int64Var(&cfg.ReportInterval, "r", 10, "report interval")
 	flag.Int64Var(&cfg.PollInterval, "p", 2, "poll interval")
 	flag.StringVar(&cfg.SignKey, "k", "", "sign key")
+	flag.StringVar(&cfg.CryptoKey, "crypto-key", "", "open crypto key")
 
 	flag.Parse()
 
@@ -49,6 +54,10 @@ func LoadAgentConfig() (*Config, error) {
 
 	if signKey, exist := os.LookupEnv("KEY"); exist {
 		cfg.SignKey = signKey
+	}
+
+	if cryptoKey, exist := os.LookupEnv("CRYPTO_KEY"); exist {
+		cfg.CryptoKey = cryptoKey
 	}
 
 	if !strings.HasPrefix(cfg.ServerEndpoint, "http") && !strings.HasPrefix(cfg.ServerEndpoint, "https") {
