@@ -20,6 +20,7 @@ type Config struct {
 	StorePath     string // путь к файлу синхронизации метрик
 	DataBaseDNS   string // строка подключения к БД
 	SignKey       string // ключ подписи
+	CryptoKey     string // путь до файла с приватным ключом сервера для расшифровывания данных
 	StoreInterval uint64 // интервал синхронизации метрик (0 - синхронная запись)
 	Restore       bool   // флаг синхронизации метрик из файла при запуске
 }
@@ -31,6 +32,7 @@ func newConfig(opt options) (*Config, error) {
 		StorePath:   opt.storePath,
 		DataBaseDNS: opt.dbDNS,
 		SignKey:     opt.signKey,
+		CryptoKey:   opt.сryptoKey,
 	}
 
 	restore, err := strconv.ParseBool(opt.restore)
@@ -64,6 +66,7 @@ type options struct {
 	restore       string
 	dbDNS         string
 	signKey       string
+	сryptoKey     string
 }
 
 // LoadServerConfig загружает настройки сервера из командной строки или переменных окружения.
@@ -82,6 +85,7 @@ func LoadServerConfig() (*Config, error) {
 	flag.StringVar(&opt.dbDNS, "d", "", "db dns")
 
 	flag.StringVar(&opt.signKey, "k", "", "sign key")
+	flag.StringVar(&opt.сryptoKey, "crypto-key", "", "private crypto key")
 
 	flag.Parse()
 
@@ -114,6 +118,11 @@ func LoadServerConfig() (*Config, error) {
 	if signKey, exist := os.LookupEnv("KEY"); exist {
 		logger.Info("SIGN_KEY env: %s", signKey)
 		opt.signKey = signKey
+	}
+
+	if cryptoKey, exist := os.LookupEnv("CRYPTO_KEY"); exist {
+		logger.Info("CRYPTO_KEY env: %s", cryptoKey)
+		opt.сryptoKey = cryptoKey
 	}
 
 	return newConfig(opt)

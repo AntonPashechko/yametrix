@@ -14,6 +14,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 
 	"github.com/AntonPashechko/yametrix/internal/compress"
+	"github.com/AntonPashechko/yametrix/internal/encrypt"
 	"github.com/AntonPashechko/yametrix/internal/logger"
 	"github.com/AntonPashechko/yametrix/internal/server/config"
 	"github.com/AntonPashechko/yametrix/internal/server/handlers"
@@ -66,6 +67,13 @@ func Create(cfg *config.Config) (*App, error) {
 	if cfg.SignKey != `` {
 		sign.Initialize([]byte(cfg.SignKey))
 		router.Use(sign.Middleware)
+	}
+
+	if cfg.CryptoKey != `` {
+		if err := encrypt.InitializeDecryptor(cfg.CryptoKey); err != nil {
+			return nil, fmt.Errorf("cannot create encryptor: %w", err)
+		}
+		router.Use(encrypt.Middleware)
 	}
 
 	metricsHandler := handlers.NewMetricsHandler(storage)

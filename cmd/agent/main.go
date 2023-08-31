@@ -11,6 +11,7 @@ import (
 	"github.com/AntonPashechko/yametrix/internal/agent/config"
 	"github.com/AntonPashechko/yametrix/internal/agent/sender"
 	"github.com/AntonPashechko/yametrix/internal/agent/updater"
+	"github.com/AntonPashechko/yametrix/internal/encrypt"
 	"github.com/AntonPashechko/yametrix/internal/models"
 	"github.com/AntonPashechko/yametrix/internal/sign"
 )
@@ -34,6 +35,14 @@ func main() {
 	//Инициализируем подписанта, если задан key
 	if cfg.SignKey != `` {
 		sign.Initialize([]byte(cfg.SignKey))
+	}
+
+	fmt.Print(cfg)
+
+	if cfg.CryptoKey != `` {
+		if err := encrypt.InitializeEncryptor(cfg.CryptoKey); err != nil {
+			log.Fatalf("cannot create encryptor: %s\n", err)
+		}
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)

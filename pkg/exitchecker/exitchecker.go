@@ -19,7 +19,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		ast.Inspect(file, func(node ast.Node) bool {
 			switch x := node.(type) {
 			case *ast.File:
-				if x.Name.Name != "main" { //Проверка на main пакет, выходим если это не так
+				if x.Name.Name != "main" { //Проверка на main пакет
 					return false
 				}
 			case *ast.FuncDecl:

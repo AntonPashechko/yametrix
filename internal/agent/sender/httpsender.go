@@ -17,6 +17,7 @@ import (
 
 	"github.com/AntonPashechko/yametrix/internal/agent/config"
 	"github.com/AntonPashechko/yametrix/internal/compress"
+	"github.com/AntonPashechko/yametrix/internal/encrypt"
 	"github.com/AntonPashechko/yametrix/internal/models"
 	"github.com/AntonPashechko/yametrix/internal/sign"
 	"github.com/AntonPashechko/yametrix/internal/storage/memstorage"
@@ -72,6 +73,16 @@ func (m *metricsConsumer) postMetrics(buf []byte) error {
 
 	//Создали клиента
 	req := m.client.R()
+
+	//Шифруем сообщение, если проинициализирован encryptor
+	if encrypt.MetricsEncryptor != nil {
+		encryptbuf, err := encrypt.MetricsEncryptor.Encrypt(buf)
+		if err != nil {
+			return fmt.Errorf("cannot encrypt metrics: %w", err)
+		}
+
+		buf = encryptbuf
+	}
 
 	//Проводим контроль целостности, если надо
 	if sign.MetricsSigner != nil {
