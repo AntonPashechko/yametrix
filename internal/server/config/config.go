@@ -2,6 +2,7 @@
 package config
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -21,8 +22,64 @@ type Config struct {
 	DataBaseDNS   string // строка подключения к БД
 	SignKey       string // ключ подписи
 	CryptoKey     string // путь до файла с приватным ключом сервера для расшифровывания данных
+	ConfigJson    string //путь до файла с json конфигурацией
 	StoreInterval uint64 // интервал синхронизации метрик (0 - синхронная запись)
 	Restore       bool   // флаг синхронизации метрик из файла при запуске
+}
+
+// formJson дополняет отсутствующие параметры из json
+func (m *Config) formJson() error {
+
+	data, err := os.ReadFile(m.ConfigJson)
+	if err != nil {
+		return fmt.Errorf("cannot read json config: %w", err)
+	}
+
+	var settings map[string]interface{}
+
+	err = json.Unmarshal(data, &settings)
+	if err != nil {
+		return fmt.Errorf("cannot unmarshal json settings: %w", err)
+	}
+
+	for stype, value := range settings {
+		switch stype {
+		case "address":
+			if m.Endpoint == `` {
+				m.Endpoint = value.(string)
+			}
+		case "restore":
+			if !m.Restore {
+				m.Restore = value.(bool)
+			}
+		case "store_interval":
+			if m.StoreInterval == 0 {
+				duration, err := time.ParseDuration(value.(string))
+				if err != nil {
+					return fmt.Errorf("bad json param 'store_interval': %w", err)
+				}
+				m.StoreInterval = uint64(duration.Seconds())
+			}
+		case "store_file":
+			if m.StorePath == `` {
+				m.StorePath = value.(string)
+			}
+		case "database_dsn":
+			if m.DataBaseDNS == `` {
+				m.DataBaseDNS = value.(string)
+			}
+		case "sign_key":
+			if m.SignKey == `` {
+				m.SignKey = value.(string)
+			}
+		case "crypto_key":
+			if m.CryptoKey == `` {
+				m.CryptoKey = value.(string)
+			}
+		}
+	}
+
+	return nil
 }
 
 // newConfig создает экземпляр Config на онове опций в строковом представлении.
@@ -33,6 +90,7 @@ func newConfig(opt options) (*Config, error) {
 		DataBaseDNS: opt.dbDNS,
 		SignKey:     opt.signKey,
 		CryptoKey:   opt.сryptoKey,
+		ConfigJson:  opt.configJson,
 	}
 
 	restore, err := strconv.ParseBool(opt.restore)
@@ -55,6 +113,17 @@ func newConfig(opt options) (*Config, error) {
 		cfg.StoreInterval = uint64(duration.Seconds())
 	}
 
+	if cfg.ConfigJson != `` {
+		err := cfg.formJson()
+		if err != nil {
+			return nil, fmt.Errorf("cannot full setting from json config: %w", err)
+		}
+	}
+
+	if !strings.HasPrefix(cfg.Endpoint, "http") && !strings.HasPrefix(cfg.Endpoint, "https") {
+		cfg.Endpoint = "http://" + cfg.Endpoint
+	}
+
 	return cfg, nil
 }
 
@@ -67,6 +136,7 @@ type options struct {
 	dbDNS         string
 	signKey       string
 	сryptoKey     string
+	configJson    string
 }
 
 // LoadServerConfig загружает настройки сервера из командной строки или переменных окружения.
@@ -86,6 +156,9 @@ func LoadServerConfig() (*Config, error) {
 
 	flag.StringVar(&opt.signKey, "k", "", "sign key")
 	flag.StringVar(&opt.сryptoKey, "crypto-key", "", "private crypto key")
+
+	flag.StringVar(&opt.configJson, "c", "", "json config")
+	flag.StringVar(&opt.configJson, "config", "", "json config")
 
 	flag.Parse()
 
@@ -123,6 +196,11 @@ func LoadServerConfig() (*Config, error) {
 	if cryptoKey, exist := os.LookupEnv("CRYPTO_KEY"); exist {
 		logger.Info("CRYPTO_KEY env: %s", cryptoKey)
 		opt.сryptoKey = cryptoKey
+	}
+
+	if config, exist := os.LookupEnv("CONFIG"); exist {
+		logger.Info("CONFIG env: %s", config)
+		opt.configJson = config
 	}
 
 	return newConfig(opt)
