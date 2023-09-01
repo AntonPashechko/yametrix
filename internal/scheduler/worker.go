@@ -1,6 +1,7 @@
+// Package scheduler определяет интерфейс для переодически повторяющейся задачи.
 package scheduler
 
-/*Интерфейс для переодически повторяющейся задачи*/
+// RecurringWorker - интерфейс для переодически повторяющейся задачи.
 type RecurringWorker interface {
 	Work() error
 }
