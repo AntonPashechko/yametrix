@@ -97,7 +97,7 @@ func (m *App) Run() {
 
 // ServerDone возвращает канал по которому определяется признак завершения работы.
 func (m *App) ServerDone() <-chan struct{} {
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	m.notifyStop = stop
 	return ctx.Done()
 }
