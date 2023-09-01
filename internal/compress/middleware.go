@@ -11,10 +11,10 @@ import (
 // compressWriter реализует интерфейс http.ResponseWriter и позволяет прозрачно для сервера
 // сжимать передаваемые данные и выставлять правильные HTTP-заголовки
 type compressWriter struct {
-	once sync.Once
-
-	w  http.ResponseWriter
 	zw *gzip.Writer
+	w  http.ResponseWriter
+
+	once sync.Once
 }
 
 func newCompressWriter(w http.ResponseWriter) *compressWriter {

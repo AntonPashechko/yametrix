@@ -4,8 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/AntonPashechko/yametrix/internal/models"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/AntonPashechko/yametrix/internal/models"
 )
 
 func TestNewStorage(t *testing.T) {
@@ -22,51 +23,59 @@ func TestNewStorage(t *testing.T) {
 	}
 }
 
-/*func TestMemStorage_GetGauge(t *testing.T) {
+func TestMemStorage_GetGauge(t *testing.T) {
 
 	storage := NewStorage()
-	storage.SetGauge(models.NewGaugeMetric("MyGauge", 9.99))
+	storage.SetGauge(context.Background(), models.NewGaugeMetric("MyGauge", 9.99))
 
 	tests := []struct {
-		name  string
-		key   string
-		want  float64
-		want1 bool
+		name      string
+		key       string
+		want      float64
+		wantError bool
 	}{
-		{"SimpleGetGauge", "MyGauge", 9.99, true},
-		{"UnknownGauge", "UnGauge", 0, false},
+		{"SimpleGetGauge", "MyGauge", 9.99, false},
+		{"UnknownGauge", "UnGauge", 0, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			val, ok := storage.GetGauge(tt.key)
-			assert.Equal(t, tt.want, val)
-			assert.Equal(t, tt.want1, ok)
+			val, err := storage.GetGauge(context.Background(), tt.key)
+			if tt.wantError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, *val.Value)
+			}
 		})
 	}
-}*/
+}
 
-/*func TestMemStorage_GetCounter(t *testing.T) {
+func TestMemStorage_GetCounter(t *testing.T) {
 
 	storage := NewStorage()
-	storage.AddCounter(models.NewCounterMetric("MyCounter", 10))
+	storage.AddCounter(context.Background(), models.NewCounterMetric("MyCounter", 10))
 
 	tests := []struct {
-		name  string
-		key   string
-		want  int64
-		want1 bool
+		name      string
+		key       string
+		want      int64
+		wantError bool
 	}{
-		{"SimpleAddCounter", "MyCounter", 10, true},
-		{"UnknownCounter", "UnCounter", 0, false},
+		{"SimpleGetCounter", "MyCounter", 10, false},
+		{"GetUnknownCounter", "UnCounter", 0, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			val, ok := storage.GetCounter(tt.key)
-			assert.Equal(t, tt.want, val)
-			assert.Equal(t, tt.want1, ok)
+			val, err := storage.GetCounter(context.Background(), tt.key)
+			if tt.wantError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, *val.Delta)
+			}
 		})
 	}
-}*/
+}
 
 func TestMemStorage_GetMetricsList(t *testing.T) {
 
@@ -125,66 +134,3 @@ func TestMemStorage_GetMetricsList(t *testing.T) {
 		})
 	}
 }
-
-/*func TestMemStorage_Marshal(t *testing.T) {
-	tests := []struct {
-		name string
-		m    *MemStorage
-		want string
-	}{
-		{
-			"SimpleMarshal",
-			&MemStorage{
-				Gauge: map[string]models.MetricDTO{
-					"MyGauge": models.MetricDTO{
-						"MyGauge",
-						"gauge",
-						nil,
-						9.99,
-					},
-				}, ,
-				Counter: map[string]int64{
-					"MyCounter": 10,
-				},
-			},
-			`{"Gauge":{"MyGauge":9.99},"Counter":{"MyCounter":10}}`,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.m.Marshal()
-			assert.NoError(t, err)
-			assert.Equal(t, tt.want, string(got))
-		})
-	}
-}*/
-
-/*func TestMemStorage_Restore(t *testing.T) {
-	tests := []struct {
-		name    string
-		data    string
-		wantErr bool
-	}{
-		{
-			"SimpleRestore",
-			`{"Gauge":{"MyGauge":9.99},"Counter":{"MyCounter":10}}`,
-			false,
-		},
-		{
-			"BadDataRestore",
-			`{"Gauge":{"MyGauge":9.99},"Counter":{"MyCounter":}}`,
-			true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			m := new(MemStorage)
-			err := m.Restore([]byte(tt.data))
-			if tt.wantErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-			}
-		})
-	}
-}*/
