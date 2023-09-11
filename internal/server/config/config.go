@@ -23,12 +23,13 @@ type Config struct {
 	SignKey       string // ключ подписи
 	CryptoKey     string // путь до файла с приватным ключом сервера для расшифровывания данных
 	ConfigJson    string //путь до файла с json конфигурацией
+	TrustedSubnet string //строковое представление бесклассовой адресации (CIDR)
 	StoreInterval uint64 // интервал синхронизации метрик (0 - синхронная запись)
 	Restore       bool   // флаг синхронизации метрик из файла при запуске
 }
 
 // formJson дополняет отсутствующие параметры из json
-func (m *Config) formJson() error {
+func (m *Config) formFile() error {
 
 	data, err := os.ReadFile(m.ConfigJson)
 	if err != nil {
@@ -76,6 +77,10 @@ func (m *Config) formJson() error {
 			if m.CryptoKey == `` {
 				m.CryptoKey = value.(string)
 			}
+		case "trusted_subnet":
+			if m.TrustedSubnet == `` {
+				m.TrustedSubnet = value.(string)
+			}
 		}
 	}
 
@@ -85,12 +90,13 @@ func (m *Config) formJson() error {
 // newConfig создает экземпляр Config на онове опций в строковом представлении.
 func newConfig(opt options) (*Config, error) {
 	cfg := &Config{
-		Endpoint:    opt.endpoint,
-		StorePath:   opt.storePath,
-		DataBaseDNS: opt.dbDNS,
-		SignKey:     opt.signKey,
-		CryptoKey:   opt.сryptoKey,
-		ConfigJson:  opt.configJson,
+		Endpoint:      opt.endpoint,
+		StorePath:     opt.storePath,
+		DataBaseDNS:   opt.dbDNS,
+		SignKey:       opt.signKey,
+		CryptoKey:     opt.сryptoKey,
+		ConfigJson:    opt.configJson,
+		TrustedSubnet: opt.trustedSubnet,
 	}
 
 	restore, err := strconv.ParseBool(opt.restore)
@@ -114,14 +120,10 @@ func newConfig(opt options) (*Config, error) {
 	}
 
 	if cfg.ConfigJson != `` {
-		err := cfg.formJson()
+		err := cfg.formFile()
 		if err != nil {
 			return nil, fmt.Errorf("cannot full setting from json config: %w", err)
 		}
-	}
-
-	if !strings.HasPrefix(cfg.Endpoint, "http") && !strings.HasPrefix(cfg.Endpoint, "https") {
-		cfg.Endpoint = "http://" + cfg.Endpoint
 	}
 
 	return cfg, nil
@@ -137,6 +139,7 @@ type options struct {
 	signKey       string
 	сryptoKey     string
 	configJson    string
+	trustedSubnet string
 }
 
 // LoadServerConfig загружает настройки сервера из командной строки или переменных окружения.
@@ -159,6 +162,8 @@ func LoadServerConfig() (*Config, error) {
 
 	flag.StringVar(&opt.configJson, "c", "", "json config")
 	flag.StringVar(&opt.configJson, "config", "", "json config")
+
+	flag.StringVar(&opt.configJson, "t", "", "trusted subnet")
 
 	flag.Parse()
 
@@ -201,6 +206,11 @@ func LoadServerConfig() (*Config, error) {
 	if config, exist := os.LookupEnv("CONFIG"); exist {
 		logger.Info("CONFIG env: %s", config)
 		opt.configJson = config
+	}
+
+	if subnet, exist := os.LookupEnv("TRUSTED_SUBNET"); exist {
+		logger.Info("TRUSTED_SUBNET env: %s", subnet)
+		opt.trustedSubnet = subnet
 	}
 
 	return newConfig(opt)

@@ -34,6 +34,7 @@ type metricsConsumer struct {
 	endpoint           string              // эндпоин сервера
 	client             *resty.Client       // клиент http
 	retriableIntervals []time.Duration     // массив retriable интрервалов для переотправки данных в случае сетевых проблем
+	agentIp            string              // IP-адрес хоста агента.
 }
 
 // NewMetricsConsumer создает экземпляр metricsConsumer.
@@ -44,6 +45,7 @@ func NewMetricsConsumer(cfg *config.Config) *metricsConsumer {
 		endpoint:           cfg.ServerEndpoint,
 		client:             resty.New(),
 		retriableIntervals: []time.Duration{time.Second, 3 * time.Second, 5 * time.Second, time.Nanosecond},
+		agentIp:            cfg.IP,
 	}
 }
 
@@ -102,6 +104,7 @@ func (m *metricsConsumer) postMetrics(buf []byte) error {
 
 	req.SetHeader("Content-Type", "application/json").
 		SetHeader("Content-Encoding", "gzip").
+		SetHeader("X-Real-IP", m.agentIp).
 		SetBody(buf)
 
 	err = m.retriablePost(req, strings.Join([]string{m.endpoint, updates}, "/"))

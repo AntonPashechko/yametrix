@@ -23,6 +23,7 @@ import (
 	"github.com/AntonPashechko/yametrix/internal/storage"
 	"github.com/AntonPashechko/yametrix/internal/storage/memstorage"
 	"github.com/AntonPashechko/yametrix/internal/storage/sqlstorage"
+	"github.com/AntonPashechko/yametrix/internal/trustedsubnets"
 )
 
 const (
@@ -74,6 +75,13 @@ func Create(cfg *config.Config) (*App, error) {
 			return nil, fmt.Errorf("cannot create encryptor: %w", err)
 		}
 		router.Use(encrypt.Middleware)
+	}
+
+	if cfg.TrustedSubnet != `` {
+		if err := trustedsubnets.Initialize(cfg.TrustedSubnet); err != nil {
+			return nil, fmt.Errorf("cannot initialize trusted subnets: %w", err)
+		}
+		router.Use(trustedsubnets.Middleware)
 	}
 
 	metricsHandler := handlers.NewMetricsHandler(storage)

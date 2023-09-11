@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"net"
 	"os"
 	"strings"
 	"time"
@@ -20,10 +21,11 @@ type Config struct {
 	ConfigJson     string //путь до файла с json конфигурацией
 	ReportInterval int64  //интервал отправки обновленных метрик
 	PollInterval   int64  //интервал обновления метрик
+	IP             string //IP-адрес хоста агента
 }
 
 // formJson дополняет отсутствующие параметры из json
-func (m *Config) formJson() error {
+func (m *Config) formFile() error {
 
 	data, err := os.ReadFile(m.ConfigJson)
 	if err != nil {
@@ -121,7 +123,7 @@ func LoadAgentConfig() (*Config, error) {
 	}
 
 	if cfg.ConfigJson != `` {
-		err := cfg.formJson()
+		err := cfg.formFile()
 		if err != nil {
 			return nil, fmt.Errorf("cannot full setting from json config: %w", err)
 		}
@@ -130,6 +132,15 @@ func LoadAgentConfig() (*Config, error) {
 	if !strings.HasPrefix(cfg.ServerEndpoint, "http") && !strings.HasPrefix(cfg.ServerEndpoint, "https") {
 		cfg.ServerEndpoint = "http://" + cfg.ServerEndpoint
 	}
+
+	// Определим IP-адрес хоста агента
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		return nil, fmt.Errorf("cannot get agent ip: %w", err)
+	}
+	defer conn.Close()
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+	cfg.IP = localAddr.IP.String()
 
 	return cfg, nil
 }
