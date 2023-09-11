@@ -10,20 +10,24 @@ import (
 	"github.com/AntonPashechko/yametrix/internal/logger"
 )
 
+// signWriter обертка над ответом для добавления подписи в заголовок.
 type signWriter struct {
 	w http.ResponseWriter
 }
 
+// newSignWriter создает экземпляр signWriter.
 func newSignWriter(w http.ResponseWriter) *signWriter {
 	return &signWriter{
 		w: w,
 	}
 }
 
+// Header возвращает заголовки.
 func (m *signWriter) Header() http.Header {
 	return m.w.Header()
 }
 
+// Write вычисляет значени подписи и добавлет заголовок HashSHA256.
 func (m *signWriter) Write(p []byte) (int, error) {
 	sign, err := MetricsSigner.CreateSign(p)
 	if err != nil {
@@ -34,10 +38,12 @@ func (m *signWriter) Write(p []byte) (int, error) {
 	return m.w.Write(p)
 }
 
+// WriteHeader устанавливает код ответа.
 func (m *signWriter) WriteHeader(statusCode int) {
 	m.w.WriteHeader(statusCode)
 }
 
+// Middleware работа по проверке подписи запроса и устновка подписи в ответ.
 func Middleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -54,7 +60,7 @@ func Middleware(h http.Handler) http.Handler {
 				return
 			}
 
-			if err := MetricsSigner.VerifySign(buf, signValue); err != nil {
+			if err := MetricsSigner.verifySign(buf, signValue); err != nil {
 				logger.Error(fmt.Sprintf("bad request signature: %s", err))
 				w.WriteHeader(http.StatusBadRequest)
 				return

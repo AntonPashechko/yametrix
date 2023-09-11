@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os/signal"
 	"sync"
@@ -10,11 +11,21 @@ import (
 	"github.com/AntonPashechko/yametrix/internal/agent/config"
 	"github.com/AntonPashechko/yametrix/internal/agent/sender"
 	"github.com/AntonPashechko/yametrix/internal/agent/updater"
+	"github.com/AntonPashechko/yametrix/internal/encrypt"
 	"github.com/AntonPashechko/yametrix/internal/models"
 	"github.com/AntonPashechko/yametrix/internal/sign"
 )
 
+var (
+	buildVersion string = "N/A"
+	buildDate    string = "N/A"
+	buildCommit  string = "N/A"
+)
+
 func main() {
+	fmt.Printf("Build version: %s\n", buildVersion)
+	fmt.Printf("Build date: %s\n", buildDate)
+	fmt.Printf("Build commit: %s\n", buildCommit)
 
 	cfg, err := config.LoadAgentConfig()
 	if err != nil {
@@ -26,7 +37,15 @@ func main() {
 		sign.Initialize([]byte(cfg.SignKey))
 	}
 
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	fmt.Print(cfg)
+
+	if cfg.CryptoKey != `` {
+		if err := encrypt.InitializeEncryptor(cfg.CryptoKey); err != nil {
+			log.Fatalf("cannot create encryptor: %s\n", err)
+		}
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	defer stop()
 
 	runtime := updater.NewRuntimeMetricsProducer(cfg)
