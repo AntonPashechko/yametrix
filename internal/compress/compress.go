@@ -1,3 +1,4 @@
+// Package compress используется для компрессии/декомпрессии запросов и ответов.
 package compress
 
 import (
