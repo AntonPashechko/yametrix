@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/AntonPashechko/yametrix/pkg/utils"
@@ -19,9 +18,10 @@ type Config struct {
 	SignKey        string //ключ подписи для контроля целостности запроса/ответа
 	CryptoKey      string //путь до файла с публичным ключом сервера для шифрования данных
 	ConfigJson     string //путь до файла с json конфигурацией
+	IP             string //IP-адрес хоста агента
+	ServiceType    string //тип сервера http или grpc
 	ReportInterval int64  //интервал отправки обновленных метрик
 	PollInterval   int64  //интервал обновления метрик
-	IP             string //IP-адрес хоста агента
 }
 
 // formJson дополняет отсутствующие параметры из json
@@ -69,6 +69,10 @@ func (m *Config) formFile() error {
 			if m.CryptoKey == `` {
 				m.CryptoKey = value.(string)
 			}
+		case "service_type":
+			if m.ServiceType == `` {
+				m.ServiceType = value.(string)
+			}
 		}
 	}
 
@@ -79,7 +83,7 @@ func (m *Config) formFile() error {
 func LoadAgentConfig() (*Config, error) {
 	cfg := new(Config)
 	/*Получаем параметры из командной строки*/
-	flag.StringVar(&cfg.ServerEndpoint, "a", "http://localhost:8080", "server address and port")
+	flag.StringVar(&cfg.ServerEndpoint, "a", "localhost:8080", "server address and port")
 	flag.Int64Var(&cfg.ReportInterval, "r", 10, "report interval")
 	flag.Int64Var(&cfg.PollInterval, "p", 2, "poll interval")
 	flag.StringVar(&cfg.SignKey, "k", "", "sign key")
@@ -127,10 +131,6 @@ func LoadAgentConfig() (*Config, error) {
 		if err != nil {
 			return nil, fmt.Errorf("cannot full setting from json config: %w", err)
 		}
-	}
-
-	if !strings.HasPrefix(cfg.ServerEndpoint, "http") && !strings.HasPrefix(cfg.ServerEndpoint, "https") {
-		cfg.ServerEndpoint = "http://" + cfg.ServerEndpoint
 	}
 
 	// Определим IP-адрес хоста агента

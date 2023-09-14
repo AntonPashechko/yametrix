@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"github.com/go-resty/resty/v2"
+	grpc "google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 
 	"github.com/AntonPashechko/yametrix/internal/agent/config"
 	"github.com/AntonPashechko/yametrix/internal/compress"
@@ -29,23 +31,46 @@ const (
 
 // metricsConsumer накапливает информацию о метриках и управляет их отправкой на сервер.
 type metricsConsumer struct {
-	storage            *memstorage.Storage // хранилище метрик агента
-	tickerTime         time.Duration       // таймер для периодической отправки метрик на сервер
-	endpoint           string              // эндпоин сервера
-	client             *resty.Client       // клиент http
-	retriableIntervals []time.Duration     // массив retriable интрервалов для переотправки данных в случае сетевых проблем
-	agentIp            string              // IP-адрес хоста агента.
+	storage            *memstorage.Storage  // хранилище метрик агента
+	tickerTime         time.Duration        // таймер для периодической отправки метрик на сервер
+	endpoint           string               // эндпоин сервера
+	client             *resty.Client        // клиент http
+	grpcClient         MetricsServiceClient // grpc клиент
+	retriableIntervals []time.Duration      // массив retriable интрервалов для переотправки данных в случае сетевых проблем
+	agentIp            string               // IP-адрес хоста агента.
 }
 
 // NewMetricsConsumer создает экземпляр metricsConsumer.
-func NewMetricsConsumer(cfg *config.Config) *metricsConsumer {
-	return &metricsConsumer{
-		storage:            memstorage.NewStorage(),
-		tickerTime:         time.Duration(cfg.ReportInterval) * time.Second,
-		endpoint:           cfg.ServerEndpoint,
-		client:             resty.New(),
-		retriableIntervals: []time.Duration{time.Second, 3 * time.Second, 5 * time.Second, time.Nanosecond},
-		agentIp:            cfg.IP,
+func NewMetricsConsumer(cfg *config.Config) (*metricsConsumer, error) {
+	if cfg.ServiceType == "http" {
+
+		if !strings.HasPrefix(cfg.ServerEndpoint, "http") && !strings.HasPrefix(cfg.ServerEndpoint, "https") {
+			cfg.ServerEndpoint = "http://" + cfg.ServerEndpoint
+		}
+
+		return &metricsConsumer{
+			storage:            memstorage.NewStorage(),
+			tickerTime:         time.Duration(cfg.ReportInterval) * time.Second,
+			endpoint:           cfg.ServerEndpoint,
+			client:             resty.New(),
+			retriableIntervals: []time.Duration{time.Second, 3 * time.Second, 5 * time.Second, time.Nanosecond},
+			agentIp:            cfg.IP,
+		}, nil
+	} else if cfg.ServiceType == "grpc" {
+
+		conn, err := grpc.Dial(cfg.ServerEndpoint, grpc.WithInsecure())
+		if err != nil {
+			return nil, fmt.Errorf("cannot dial grpc: %w", err)
+		}
+
+		return &metricsConsumer{
+			storage:    memstorage.NewStorage(),
+			tickerTime: time.Duration(cfg.ReportInterval) * time.Second,
+			grpcClient: NewMetricsServiceClient(conn),
+			agentIp:    cfg.IP,
+		}, nil
+	} else {
+		return nil, fmt.Errorf("unknown service type: %s", cfg.ServiceType)
 	}
 }
 
@@ -70,8 +95,32 @@ func (m *metricsConsumer) retriablePost(req *resty.Request, postURL string) erro
 	return fmt.Errorf("cannot retriable post metric: %w", err)
 }
 
+func (m *metricsConsumer) send(metrics []models.MetricDTO) error {
+
+	if m.client != nil {
+		err := m.sendHTTP(metrics)
+		if err != nil {
+			return fmt.Errorf("cannot send metrics batch by http: %w", err)
+		}
+	} else {
+		err := m.sendGRPC(metrics)
+		if err != nil {
+			return fmt.Errorf("cannot send metrics batch by grpc: %w", err)
+		}
+	}
+
+	return nil
+}
+
 // postMetrics отправка метрик на сервер.
-func (m *metricsConsumer) postMetrics(buf []byte) error {
+func (m *metricsConsumer) sendHTTP(metrics []models.MetricDTO) error {
+
+	metricBytes := new(bytes.Buffer)
+	if err := json.NewEncoder(metricBytes).Encode(metrics); err != nil {
+		return fmt.Errorf("error encoding metrics %w", err)
+	}
+
+	buf := metricBytes.Bytes()
 
 	//Создали клиента
 	req := m.client.R()
@@ -115,6 +164,41 @@ func (m *metricsConsumer) postMetrics(buf []byte) error {
 	return nil
 }
 
+// postMetrics отправка метрик на сервер.
+func (m *metricsConsumer) sendGRPC(metrics []models.MetricDTO) error {
+
+	gpcrMetrics := make([]*Metric, 0, len(metrics))
+	for _, metric := range metrics {
+		gpcrMetric := &Metric{
+			Id: metric.ID,
+		}
+
+		switch metric.MType {
+		case models.GaugeType:
+			gpcrMetric.Type = MetricType_GAUGE
+			gpcrMetric.Value = *metric.Value
+		case models.CounterType:
+			gpcrMetric.Type = MetricType_GAUGE
+			gpcrMetric.Delta = *metric.Delta
+		}
+
+		gpcrMetrics = append(gpcrMetrics, gpcrMetric)
+	}
+
+	//добавляем IP
+	md := metadata.New(map[string]string{"X-Real-IP": m.agentIp})
+	ctx := metadata.NewOutgoingContext(context.Background(), md)
+
+	_, err := m.grpcClient.UpdateMetrics(ctx, &UpdateMetricsReq{
+		Metrics: gpcrMetrics,
+	})
+	if err != nil {
+		return fmt.Errorf("send metrics process error: %w", err)
+	}
+
+	return nil
+}
+
 // Work управляет процессом получения новых метрик и оправкой их на сервер
 func (m *metricsConsumer) Work(ctx context.Context, wg *sync.WaitGroup, metricCh <-chan models.MetricDTO) {
 
@@ -139,12 +223,7 @@ func (m *metricsConsumer) Work(ctx context.Context, wg *sync.WaitGroup, metricCh
 				break
 			}
 
-			buf := new(bytes.Buffer)
-			if err := json.NewEncoder(buf).Encode(metrics); err != nil {
-				fmt.Printf("error encoding metrics %s\n", err)
-			}
-
-			err := m.postMetrics(buf.Bytes())
+			err := m.send(metrics)
 			if err != nil {
 				fmt.Printf("cannot send metrics batch: %s\n", err)
 			}

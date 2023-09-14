@@ -50,7 +50,11 @@ func main() {
 
 	runtime := updater.NewRuntimeMetricsProducer(cfg)
 	another := updater.NewAnotherMetricsProducer(cfg)
-	consumer := sender.NewMetricsConsumer(cfg)
+
+	consumer, err := sender.NewMetricsConsumer(cfg)
+	if err != nil {
+		fmt.Printf("cannot create metrics consumer: %s\n", err)
+	}
 
 	metricCh := make(chan models.MetricDTO)
 

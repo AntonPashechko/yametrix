@@ -22,8 +22,9 @@ type Config struct {
 	DataBaseDNS   string // строка подключения к БД
 	SignKey       string // ключ подписи
 	CryptoKey     string // путь до файла с приватным ключом сервера для расшифровывания данных
-	ConfigJson    string //путь до файла с json конфигурацией
-	TrustedSubnet string //строковое представление бесклассовой адресации (CIDR)
+	ConfigJson    string // путь до файла с json конфигурацией
+	TrustedSubnet string // строковое представление бесклассовой адресации (CIDR)
+	AppType       string // тип сервера http или grpc
 	StoreInterval uint64 // интервал синхронизации метрик (0 - синхронная запись)
 	Restore       bool   // флаг синхронизации метрик из файла при запуске
 }
@@ -80,6 +81,10 @@ func (m *Config) formFile() error {
 		case "trusted_subnet":
 			if m.TrustedSubnet == `` {
 				m.TrustedSubnet = value.(string)
+			}
+		case "app_type":
+			if m.AppType == `` {
+				m.AppType = value.(string)
 			}
 		}
 	}

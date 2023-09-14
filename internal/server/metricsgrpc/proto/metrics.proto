@@ -1,0 +1,29 @@
+syntax = "proto3";
+import "google/protobuf/empty.proto";
+
+package metricsgrpc; 
+option go_package = "./metricsgrpc";
+
+service MetricsService {
+    /*Восстановление пароля пользователем*/
+    rpc UpdateMetrics(UpdateMetricsReq) returns (google.protobuf.Empty) {}
+}
+
+//Типы метрик
+enum MetricType {
+    GAUGE= 0;                   
+    COUNTER = 1;                
+}
+
+//Метрика
+message Metric{
+    int64 delta = 1;
+    double value = 2;
+    string id = 3;
+    MetricType type = 4; 
+}
+
+//Запрос обновления метрик
+message UpdateMetricsReq{
+    repeated Metric metrics = 1;
+}
