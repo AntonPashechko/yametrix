@@ -15,6 +15,7 @@ import (
 
 	"github.com/go-resty/resty/v2"
 	grpc "google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 
 	"github.com/AntonPashechko/yametrix/internal/agent/config"
@@ -58,7 +59,7 @@ func NewMetricsConsumer(cfg *config.Config) (*metricsConsumer, error) {
 		}, nil
 	} else if cfg.ServiceType == "grpc" {
 
-		conn, err := grpc.Dial(cfg.ServerEndpoint, grpc.WithInsecure())
+		conn, err := grpc.Dial(cfg.ServerEndpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			return nil, fmt.Errorf("cannot dial grpc: %w", err)
 		}
